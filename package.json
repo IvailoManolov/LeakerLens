@@ -1,0 +1,130 @@
+{
+  "name": "leaklens",
+  "displayName": "LeakLens",
+  "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
+  "version": "1.0.0",
+  "publisher": "leaklens",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leaklens/leaklens"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "secrets",
+    "security",
+    "api keys",
+    "credentials",
+    "leak"
+  ],
+  "galleryBanner": {
+    "color": "#0b1220",
+    "theme": "dark"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "leaklens.scanWorkspace",
+        "title": "LeakLens: Scan Workspace for Secrets"
+      },
+      {
+        "command": "leaklens.focusPanel",
+        "title": "LeakLens: Show Findings Panel"
+      },
+      {
+        "command": "leaklens.installGitHook",
+        "title": "LeakLens: Install Pre-commit Guard (this repo)"
+      },
+      {
+        "command": "leaklens.uninstallGitHook",
+        "title": "LeakLens: Remove Pre-commit Guard (this repo)"
+      },
+      {
+        "command": "leaklens.activateLicense",
+        "title": "LeakLens: Activate Pro License"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "leaklens",
+          "title": "LeakLens",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "leaklens": [
+        {
+          "id": "leaklens.panel",
+          "name": "Findings",
+          "type": "webview"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "LeakLens",
+      "properties": {
+        "leaklens.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time secret detection."
+        },
+        "leaklens.debounceMs": {
+          "type": "number",
+          "default": 200,
+          "minimum": 50,
+          "maximum": 1000,
+          "description": "Delay after typing stops before re-scanning a document (ms)."
+        },
+        "leaklens.commitBlocking": {
+          "type": "boolean",
+          "default": false,
+          "description": "When the pre-commit guard is installed, block commits that contain secrets (Pro). When off, the guard warns only."
+        },
+        "leaklens.maxFileSizeKb": {
+          "type": "number",
+          "default": 2048,
+          "description": "Skip real-time scanning of files larger than this (KB) to protect typing latency."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:css": "tailwindcss -i ./src/webview/styles.css -o ./dist/webview.css --minify",
+    "build:js": "node esbuild.mjs",
+    "build": "npm run typecheck && npm run build:js -- --production && npm run build:css",
+    "watch": "node esbuild.mjs --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "pretest:integration": "tsc -p ./tsconfig.test.json",
+    "test:integration": "node ./out-test/test/integration/runTest.js",
+    "package": "npm run build && vsce package --no-dependencies",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.75.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "@vscode/test-electron": "^2.3.9",
+    "@vscode/vsce": "^2.24.0",
+    "esbuild": "^0.20.2",
+    "glob": "^10.3.10",
+    "mocha": "^10.4.0",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

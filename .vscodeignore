@@ -1,0 +1,27 @@
+# Everything is excluded except the bundled output + manifest assets.
+**
+!dist/**
+!media/**
+!package.json
+!README.md
+!LICENSE
+!CHANGELOG.md
+
+# Belt-and-suspenders: never ship sources, tests, or tooling.
+src/**
+test/**
+out/**
+out-test/**
+node_modules/**
+Documentation/**
+.claude/**
+.vscode/**
+*.ts
+*.mjs
+*.map
+tsconfig*.json
+vitest.config.ts
+tailwind.config.js
+esbuild.mjs
+.gitignore
+vscode-extension-leaker.md

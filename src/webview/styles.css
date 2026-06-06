@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * The webview inherits VS Code's font and colors via theme variables (see
+ * tailwind.config.js). Only minimal base resets live here.
+ */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--vscode-foreground);
+  background: transparent;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+}
+
+/* Respect the user's motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

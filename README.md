@@ -1,0 +1,56 @@
+# LeakLens — catch secrets before they leak
+
+**LeakLens** finds API keys, tokens, passwords, and `.env` secrets **as you type and
+before you commit** — with **100% of analysis running locally**. Nothing ever leaves your
+machine. No account, no cloud, no telemetry of your code.
+
+## Why LeakLens
+
+- **Local-only, always.** Detection never makes a network call. Your code and findings
+  stay on your machine — that's the whole point.
+- **Zero-config.** Install it and it works. Sensible, quiet defaults; no setup wizard.
+- **Fast.** Scanning is debounced and runs off the typing hot path. It won't lag your
+  editor.
+- **Calm, not alarmist.** Native theming, clear hovers, one-click fixes.
+
+## Features
+
+- Real-time inline detection — squiggles, overview-ruler marks, and teaching hovers.
+- One-click remediation: **Ignore here**, **Mask value**, **Move to `.env`** (via the
+  lightbulb, the hover, or the panel).
+- A calm **Findings panel** grouping detections by severity — click to jump.
+- **Scan Workspace** command for an on-demand sweep.
+- Opt-in **git pre-commit guard** that warns (or, with Pro, blocks) on staged secrets.
+
+## Detected secret types
+
+AWS Access Keys, Google/GCP API keys, GitHub tokens, Stripe keys, OpenAI keys, Anthropic
+keys, Slack tokens, JWTs, PEM private keys, generic high-entropy secrets, and hardcoded
+`.env`-style values. See [`Documentation/1.0.0/RULES.md`](Documentation/1.0.0/RULES.md).
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `LeakLens: Scan Workspace for Secrets` | Sweep the whole workspace |
+| `LeakLens: Show Findings Panel` | Reveal the panel |
+| `LeakLens: Install Pre-commit Guard` | Add the opt-in git hook to this repo |
+| `LeakLens: Remove Pre-commit Guard` | Remove it |
+| `LeakLens: Activate Pro License` | Enter an offline Pro key |
+
+## Free vs Pro
+
+The free tier — real-time detection, the headline ruleset, and manual fixes — is genuinely
+useful forever. **Pro** adds commit-blocking policy and (coming) custom rule packs and
+report export. Licenses are verified **offline** — a valid key works on a plane.
+
+## Privacy
+
+LeakLens performs **no network requests** for detection and collects **no telemetry** of
+your code, secrets, or findings. The only network access the product ever makes is offline
+license verification — and that degrades gracefully when offline.
+
+## Inline ignore
+
+Add `leaklens:ignore` anywhere on a line (e.g. `// leaklens:ignore`) to suppress findings
+on that line. The **Ignore here** quick-fix does this for you.

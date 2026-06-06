@@ -1,0 +1,42 @@
+<!--
+  Reference shell for the LeakLens findings panel.
+
+  The extension host (panelController.ts) generates the real HTML at runtime so it can
+  inject a Content-Security-Policy nonce and the webview-safe resource URIs. This file
+  documents the structure the host mirrors and is scanned by Tailwind so the classes the
+  client uses are kept in the purged build.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="webview.css" />
+  </head>
+  <body class="text-base text-fg">
+    <div id="app" class="flex flex-col h-full">
+      <!-- Header -->
+      <header class="flex items-center justify-between px-3 py-2 border-b border-border">
+        <span class="font-medium">LeakLens</span>
+        <button class="px-2 py-1 rounded bg-btnSecondary text-btnSecondaryFg hover:bg-hover">Rescan</button>
+      </header>
+
+      <!-- Empty state -->
+      <div class="flex flex-1 items-center justify-center text-ok">No secrets detected — you're clean ✓</div>
+
+      <!-- A finding row (rendered dynamically) -->
+      <div class="group px-3 py-2 border-l-2 border-critical hover:bg-hover cursor-pointer">
+        <div class="flex items-center gap-2">
+          <span class="text-critical font-medium">AWS Access Key ID</span>
+          <span class="text-muted">file.ts:12</span>
+        </div>
+        <code class="font-mono text-muted">AKIA…********</code>
+        <div class="flex gap-2 mt-1 opacity-0 group-hover:opacity-100">
+          <button class="text-link hover:underline">Ignore here</button>
+          <button class="text-link hover:underline">Mask value</button>
+          <button class="text-link hover:underline">Move to .env</button>
+        </div>
+      </div>
+    </div>
+    <script src="webview.js"></script>
+  </body>
+</html>

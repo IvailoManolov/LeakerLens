@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Engine unit tests (100% coverage gate)
+        run: npm run test
+
+      - name: Build (esbuild + Tailwind)
+        run: npm run build
+
+      # The integration smoke suite needs a VS Code GUI; run it headless under xvfb.
+      - name: Integration smoke tests
+        run: xvfb-run -a npm run test:integration
+
+      - name: Package VSIX
+        run: npx vsce package --no-dependencies
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: leaklens-vsix
+          path: '*.vsix'
+          if-no-files-found: error

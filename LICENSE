@@ -1,0 +1,22 @@
+LeakLens — End User License Agreement
+Copyright (c) 2026 LeakLens. All rights reserved.
+
+This software is licensed, not sold.
+
+1. Grant. You are granted a non-exclusive, non-transferable license to install and use
+   LeakLens for your own software-development purposes. Pro features require a valid Pro
+   license key.
+
+2. Restrictions. You may not redistribute, resell, sublicense, or publish the extension or
+   its source, nor remove or alter this notice, without prior written permission.
+
+3. Privacy. LeakLens performs all secret detection locally and transmits no code, secrets,
+   or findings off your machine.
+
+4. No Warranty. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE, AND NONINFRINGEMENT. LeakLens is a detection aid and does not
+   guarantee that all secrets will be found.
+
+5. Limitation of Liability. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+   FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
