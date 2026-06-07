@@ -31,6 +31,11 @@ describe('LeakLens integration smoke', () => {
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes('leaklens.scanWorkspace'), 'scanWorkspace registered');
     assert.ok(commands.includes('leaklens.applyRemediation'), 'applyRemediation registered');
+    assert.ok(commands.includes('leaklens.showSecretGraph'), 'showSecretGraph registered');
+  });
+
+  it('runs the Secret Graph command without throwing', async () => {
+    await vscode.commands.executeCommand('leaklens.showSecretGraph');
   });
 
   it('raises a diagnostic for a real secret in a file', async () => {

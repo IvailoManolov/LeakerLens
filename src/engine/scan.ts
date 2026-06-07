@@ -5,6 +5,7 @@
  */
 import { DEFAULT_RULESET } from './rules';
 import { shannonEntropy } from './entropy';
+import { fingerprint } from './fingerprint';
 import type {
   Finding,
   Remediation,
@@ -107,6 +108,7 @@ function collectMatches(
       line,
       column: start - lineStarts[line],
       matchPreview: rule.mask(value),
+      fingerprint: fingerprint(value),
       message: rule.message,
       remediations: buildRemediations(rule.remediations ?? DEFAULT_REMEDIATION_KINDS),
       ...(entropy !== undefined ? { entropy } : {}),

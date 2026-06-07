@@ -33,16 +33,54 @@ export interface SeverityGroup {
   readonly items: readonly PanelFinding[];
 }
 
+/** Which visualization the panel is showing. */
+export type PanelView = 'list' | 'tree';
+
+/** One occurrence of a secret. `id` reuses the host's jump/remediate id format. */
+export interface TreeOccurrence {
+  readonly id: string;
+  readonly line: number;
+  readonly column: number;
+}
+
+/** All occurrences of a secret within a single file. */
+export interface TreeFileNode {
+  readonly file: string;
+  readonly count: number;
+  readonly occurrences: readonly TreeOccurrence[];
+}
+
+/** One unique secret value and everywhere it is referenced from. */
+export interface TreeSecretNode {
+  readonly fingerprint: string;
+  readonly ruleName: string;
+  readonly severity: Severity;
+  readonly preview: string;
+  readonly totalCount: number;
+  readonly fileCount: number;
+  readonly files: readonly TreeFileNode[];
+}
+
+/** The "where is each secret referenced from" tree. */
+export interface TreeState {
+  readonly secrets: readonly TreeSecretNode[];
+  readonly totalSecrets: number;
+  readonly totalRefs: number;
+}
+
 /** The full state the panel renders. */
 export interface PanelState {
   readonly groups: readonly SeverityGroup[];
+  readonly tree: TreeState;
   readonly totalCount: number;
   readonly isEmpty: boolean;
   readonly scanning: boolean;
 }
 
 /** Host → panel messages. */
-export type HostToPanel = { readonly type: 'state'; readonly payload: PanelState };
+export type HostToPanel =
+  | { readonly type: 'state'; readonly payload: PanelState }
+  | { readonly type: 'setView'; readonly view: PanelView };
 
 /** Panel → host messages (user actions). */
 export type PanelToHost =

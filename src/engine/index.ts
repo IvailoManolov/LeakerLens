@@ -4,6 +4,7 @@
  */
 export { scanText, IGNORE_MARKER } from './scan';
 export { shannonEntropy } from './entropy';
+export { fingerprint } from './fingerprint';
 export { maskAll, maskMiddle, maskPrefix } from './mask';
 export { isExamplePath, looksLikePlaceholder } from './allowlist';
 export { DEFAULT_RULESET } from './rules';

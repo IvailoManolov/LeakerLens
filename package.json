@@ -2,7 +2,7 @@
   "name": "leaklens",
   "displayName": "LeakLens",
   "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "leaklens",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -40,6 +40,10 @@
       {
         "command": "leaklens.focusPanel",
         "title": "LeakLens: Show Findings Panel"
+      },
+      {
+        "command": "leaklens.showSecretGraph",
+        "title": "LeakLens: Show Secret Graph"
       },
       {
         "command": "leaklens.installGitHook",

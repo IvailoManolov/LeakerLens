@@ -18,6 +18,7 @@ export function registerCommands(
 ): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('leaklens.scanWorkspace', () => scanWorkspace(controller, panel)),
+    vscode.commands.registerCommand('leaklens.showSecretGraph', () => showSecretGraph(controller, panel)),
     vscode.commands.registerCommand('leaklens.focusPanel', () =>
       vscode.commands.executeCommand('leaklens.panel.focus'),
     ),
@@ -53,6 +54,12 @@ async function scanWorkspace(controller: ScanController, panel: PanelController)
     total === 0 ? 'LeakLens: no secrets found. ✓' : `LeakLens: ${total} potential secret(s) found.`,
   );
   await vscode.commands.executeCommand('leaklens.panel.focus');
+}
+
+async function showSecretGraph(controller: ScanController, panel: PanelController): Promise<void> {
+  // The graph is workspace-wide, so make sure findings are populated before showing it.
+  await scanWorkspace(controller, panel);
+  panel.setView('tree');
 }
 
 async function installGitHook(extensionUri: vscode.Uri, license: License): Promise<void> {

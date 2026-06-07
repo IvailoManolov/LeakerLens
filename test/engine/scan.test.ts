@@ -61,6 +61,17 @@ describe('scanText mechanics', () => {
     expect(scan(`x = 1\nconst k = "${AWS}" // ${IGNORE_MARKER}`)).toHaveLength(0);
   });
 
+  it('gives identical secret values the same fingerprint (cross-line clustering)', () => {
+    const f = scan(`const a = "${AWS}"\nconst b = "${AWS}"`);
+    expect(f).toHaveLength(2);
+    expect(f[0].fingerprint).toBe(f[1].fingerprint);
+  });
+
+  it('gives different secret values different fingerprints', () => {
+    const f = scan(`const a = "${AWS}"\nconst z = "${GH}"`);
+    expect(f[0].fingerprint).not.toBe(f[1].fingerprint);
+  });
+
   it('uses the default ruleset when none is provided', () => {
     expect(DEFAULT_RULESET.rules.length).toBeGreaterThan(0);
   });

@@ -2,6 +2,23 @@
 
 All notable changes to LeakLens are documented here.
 
+## [1.1.0] — 2026-06-07
+
+### Added
+
+- **Secret Graph** — a collapsible tree view (toggle in the Findings panel) that clusters
+  findings by the unique secret value and shows every file and line it's referenced from
+  (`Secret → File → Line`), with reference/file counts and click-to-jump.
+- `LeakLens: Show Secret Graph` command.
+- Engine `fingerprint` on each finding (non-reversible hash of the raw value) so identical
+  secrets cluster — the raw secret never reaches the UI.
+- Tree search box; List ↔ Tree toggle and search are instant (client-side, no round-trip).
+
+### Performance
+
+- Grouping is a single O(findings) pass; the tree renders children lazily, so a collapsed
+  tree is O(distinct secrets).
+
 ## [1.0.0] — 2026-06-06
 
 Initial release.
