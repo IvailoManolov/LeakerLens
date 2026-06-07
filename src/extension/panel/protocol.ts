@@ -10,10 +10,21 @@ import type { RemediationKind, Severity } from '../../engine/types';
 
 export type { RemediationKind, Severity };
 
+/**
+ * A precise location, carried as separate fields (never a delimited string) so it can't
+ * be corrupted when written into the webview DOM and sent back.
+ */
+export interface Locator {
+  /** `vscode.Uri.toString()` of the document (percent-encoded, attribute-safe). */
+  readonly uri: string;
+  readonly start: number;
+  readonly end: number;
+}
+
 /** A finding flattened for display in the panel. */
 export interface PanelFinding {
-  /** Stable id: `${file}:${start}:${ruleId}` — used for jump/remediate round-trips. */
-  readonly id: string;
+  /** Document location, used for jump/remediate round-trips. */
+  readonly loc: Locator;
   readonly ruleName: string;
   readonly severity: Severity;
   /** Workspace-relative path. */
@@ -36,9 +47,9 @@ export interface SeverityGroup {
 /** Which visualization the panel is showing. */
 export type PanelView = 'list' | 'tree';
 
-/** One occurrence of a secret. `id` reuses the host's jump/remediate id format. */
+/** One occurrence of a secret. */
 export interface TreeOccurrence {
-  readonly id: string;
+  readonly loc: Locator;
   readonly line: number;
   readonly column: number;
 }
@@ -85,6 +96,7 @@ export type HostToPanel =
 /** Panel → host messages (user actions). */
 export type PanelToHost =
   | { readonly type: 'ready' }
-  | { readonly type: 'jumpTo'; readonly id: string }
-  | { readonly type: 'remediate'; readonly id: string; readonly kind: RemediationKind }
-  | { readonly type: 'rescan' };
+  | { readonly type: 'jumpTo'; readonly loc: Locator }
+  | { readonly type: 'remediate'; readonly loc: Locator; readonly kind: RemediationKind }
+  | { readonly type: 'rescan' }
+  | { readonly type: 'log'; readonly text: string };

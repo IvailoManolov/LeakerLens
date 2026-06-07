@@ -23,7 +23,9 @@ export function activate(context: vscode.ExtensionContext): void {
     controller,
     decorationType,
     panel,
-    vscode.window.registerWebviewViewProvider(PanelController.viewId, panel),
+    vscode.window.registerWebviewViewProvider(PanelController.viewId, panel, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
     vscode.languages.registerHoverProvider(FILE_SELECTOR, new LeakHoverProvider(controller)),
     vscode.languages.registerCodeActionsProvider(FILE_SELECTOR, new LeakCodeActionProvider(controller), {
       providedCodeActionKinds: LeakCodeActionProvider.kinds,

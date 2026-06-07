@@ -2,7 +2,31 @@
 
 All notable changes to LeakLens are documented here.
 
-## [1.1.0] — 2026-06-07
+## [1.1.2] — 2026-06-07
+
+### Fixed
+
+- **Panel interactions now work** (open-on-click, Ignore / Mask / Move-to-`.env`, in both
+  List and Tree). Root cause: each location id was packed into a string using a NUL (`\0`)
+  separator; written into a webview `data-` attribute, the HTML parser replaced NUL with
+  U+FFFD (�), corrupting the id so files couldn't be opened and remediations silently
+  failed. Locations are now carried as a structured `{uri, start, end}` with no delimiter —
+  impossible to corrupt. `remediate()` is also wrapped so any future failure surfaces.
+
+## [1.1.1] — 2026-06-07
+
+### Fixed / hardened
+
+- Panel interactions (open-on-click, Ignore / Mask / Move-to-`.env`) made robust: click
+  routing now uses `closest('[data-action]')` and is wrapped so a click can never silently
+  die; `jumpTo` failures are surfaced instead of swallowed.
+- The findings panel webview now uses `retainContextWhenHidden` so hiding/showing it can't
+  desync the message handler.
+
+### Added (diagnostics)
+
+- A **"LeakLens" Output channel** logging panel lifecycle and every webview↔host message,
+  to pinpoint any interaction issue without developer tools. (Verbose logging is temporary.)
 
 ### Added
 
