@@ -45,7 +45,7 @@ export interface SeverityGroup {
 }
 
 /** Which visualization the panel is showing. */
-export type PanelView = 'list' | 'tree';
+export type PanelView = 'list' | 'tree' | 'map';
 
 /** One occurrence of a secret. */
 export interface TreeOccurrence {

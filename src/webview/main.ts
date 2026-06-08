@@ -23,6 +23,7 @@ import type {
   TreeOccurrence,
   TreeSecretNode,
 } from '../extension/panel/protocol';
+import { createSecretMap, type SecretMapController } from './secretMap';
 
 interface VsCodeApi {
   postMessage(message: PanelToHost): void;
@@ -58,6 +59,8 @@ let state: PanelState | null = null;
 let view: PanelView = 'list';
 let query = '';
 const expanded = new Set<string>();
+let secretMap: SecretMapController | null = null;
+let mapMounted = false;
 
 interface Persisted {
   view?: PanelView;
@@ -121,7 +124,7 @@ function headerHtml(): string {
         <span class="font-medium">LeakLens</span>
         <div class="flex items-center gap-2">
           <div class="inline-flex rounded overflow-hidden border border-border">
-            ${tab('list', 'List')}${tab('tree', 'Tree')}
+            ${tab('list', 'List')}${tab('tree', 'Tree')}${tab('map', 'Map')}
           </div>
           <button data-action="rescan" class="px-2 py-1 rounded bg-btnSecondary text-btnSecondaryFg hover:bg-hover">Rescan</button>
         </div>
@@ -273,6 +276,10 @@ function bodyHtml(): string {
   if (state.isEmpty) {
     return emptyStateHtml();
   }
+  if (view === 'map') {
+    // Stable mount host; the canvas controller owns everything inside it (see secretMap.ts).
+    return '<div id="mapHost" class="relative flex-1 min-h-0"></div>';
+  }
   return view === 'tree' ? treeHtml(state) : listHtml(state);
 }
 
@@ -288,6 +295,29 @@ function renderBody(): void {
   if (el) {
     el.innerHTML = bodyHtml();
   }
+  syncMapLifecycle();
+}
+
+/**
+ * Mount the Secret Map when its tab is active (and there's data), tear it down otherwise.
+ * Because `renderBody` recreates `#mapHost` on every render, `mount()` is idempotent — it
+ * re-parents the persistent canvas into the fresh host and preserves the running simulation.
+ */
+function syncMapLifecycle(): void {
+  if (view !== 'map' || !state || state.isEmpty) {
+    if (mapMounted) {
+      secretMap?.destroy();
+      mapMounted = false;
+    }
+    return;
+  }
+  const host = document.getElementById('mapHost');
+  if (!host) {
+    return;
+  }
+  secretMap ??= createSecretMap(send);
+  secretMap.mount(host, state.tree);
+  mapMounted = true;
 }
 
 function renderAll(): void {
@@ -380,6 +410,9 @@ window.addEventListener('message', (event: MessageEvent<HostToPanel>) => {
     state = message.payload;
     renderHeader();
     renderBody();
+    if (mapMounted) {
+      secretMap?.update(state.tree);
+    }
   } else if (message.type === 'setView') {
     view = message.view;
     persist();

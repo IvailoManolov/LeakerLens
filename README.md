@@ -19,8 +19,11 @@ machine. No account, no cloud, no telemetry of your code.
 - One-click remediation: **Ignore here**, **Mask value**, **Move to `.env`** (via the
   lightbulb, the hover, or the panel).
 - A calm **Findings panel** grouping detections by severity — click to jump.
-- **Secret Graph** — a tree view (List ↔ Tree toggle) showing where each unique secret is
-  referenced from across your workspace (`Secret → File → Line`), with counts and search.
+- **Secret Graph** — see where each unique secret is referenced from across your workspace,
+  two ways from one panel (List · Tree · Map): a **Tree** (`Secret → File → Line`, with counts
+  and search) and an animated, force-directed **Map** — secrets as nodes (coloured by
+  severity, sized by reference count) linked to the files they appear in; drag, hover, and
+  click to jump.
 - **Scan Workspace** command for an on-demand sweep.
 - Opt-in **git pre-commit guard** that warns (or, with Pro, blocks) on staged secrets.
 
@@ -36,7 +39,7 @@ keys, Slack tokens, JWTs, PEM private keys, generic high-entropy secrets, and ha
 |---|---|
 | `LeakLens: Scan Workspace for Secrets` | Sweep the whole workspace |
 | `LeakLens: Show Findings Panel` | Reveal the panel |
-| `LeakLens: Show Secret Graph` | Open the tree of where each secret is referenced |
+| `LeakLens: Show Secret Graph` | Open the animated map of where each secret is referenced |
 | `LeakLens: Install Pre-commit Guard` | Add the opt-in git hook to this repo |
 | `LeakLens: Remove Pre-commit Guard` | Remove it |
 | `LeakLens: Activate Pro License` | Enter an offline Pro key |

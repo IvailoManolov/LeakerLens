@@ -59,7 +59,7 @@ async function scanWorkspace(controller: ScanController, panel: PanelController)
 async function showSecretGraph(controller: ScanController, panel: PanelController): Promise<void> {
   // The graph is workspace-wide, so make sure findings are populated before showing it.
   await scanWorkspace(controller, panel);
-  panel.setView('tree');
+  panel.setView('map');
 }
 
 async function installGitHook(extensionUri: vscode.Uri, license: License): Promise<void> {

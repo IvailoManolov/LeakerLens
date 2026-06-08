@@ -2,6 +2,26 @@
 
 All notable changes to LeakLens are documented here.
 
+## [1.2.0] — 2026-06-08
+
+### Added
+
+- **Secret Map** — a third Findings-panel view (List · Tree · **Map**) that visualizes the
+  workspace's secrets as an animated, force-directed graph: each unique secret is a node
+  (coloured by severity, sized by reference count) linked to the files it appears in, so a
+  file shared by several secrets stands out at a glance. Drag nodes, hover for details, and
+  click to jump to the source. Rendered locally on a `<canvas>` with **zero new dependencies**
+  and **nothing leaving the webview** — only the masked preview + fingerprint, never a raw
+  secret.
+- `LeakLens: Show Secret Graph` now opens the Map.
+
+### Performance
+
+- The map is a pure re-visualization of data the panel already holds; its layout settles and
+  then **stops** (no idle CPU), pauses while the panel is hidden, and respects
+  `prefers-reduced-motion` (static layout). Very large graphs render a settled layout once and
+  **disclose** any node cap rather than truncating silently.
+
 ## [1.1.2] — 2026-06-07
 
 ### Fixed
