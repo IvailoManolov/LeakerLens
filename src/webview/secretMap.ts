@@ -13,6 +13,7 @@
 import {
   ALPHA_MIN,
   buildGraphModel,
+  buildTreeModel,
   capForNodeCount,
   defaultForceParams,
   FILE_RADIUS,
@@ -22,12 +23,17 @@ import {
   SECRET_RADIUS,
   seedPosition,
   severityColorVars,
+  treeLayout,
   type ForceParams,
+  type GraphInput,
   type GraphModel,
   type GraphNode,
+  type LayoutBounds,
   type RenderPolicy,
   type SimEdge,
   type SimNode,
+  type TreeGraphModel,
+  type TreePosition,
 } from '../engine/secretMapModel';
 import type { PanelToHost, Severity, TreeState } from '../extension/panel/protocol';
 
@@ -39,6 +45,25 @@ export interface SecretMapController {
 }
 
 type Send = (message: PanelToHost) => void;
+
+/** Which layout the map is showing. */
+type LayoutMode = 'tree' | 'force';
+
+/** A pan/zoom camera mapping world coordinates to the canvas. */
+interface Camera {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
+
+const MIN_SCALE = 0.1;
+const MAX_SCALE = 4;
+/** Leave a small breathing margin when fitting a layout to the canvas. */
+const FIT_PADDING = 0.92;
+
+function clamp(value: number, min: number, max: number): number {
+  return value < min ? min : value > max ? max : value;
+}
 
 const SEVERITY_FALLBACK: Record<Severity, string> = {
   critical: '#f14c4c',
@@ -89,6 +114,26 @@ class SecretMap implements SecretMapController {
   private signature = '';
   private policy: RenderPolicy = { animate: true, renderLimit: 0, disclosed: false };
 
+  // Tree layout (the default view): a static, tidy file→secret tree.
+  private layoutMode: LayoutMode = 'tree';
+  private treeModel: TreeGraphModel = { nodes: [], edges: [] };
+  private treePos: readonly TreePosition[] = [];
+  private treeBounds: LayoutBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 };
+  private treePolicy: RenderPolicy = { animate: false, renderLimit: 0, disclosed: false };
+  private treeRenderLimit = 0;
+  private camera: Camera = { offsetX: 0, offsetY: 0, scale: 1 };
+  /** Re-fit on the next kick (set on new data or a mode switch; cleared once applied). */
+  private fitPending = true;
+  private controls: HTMLDivElement | null = null;
+
+  // Pan bookkeeping (tree mode: drag empty space to pan).
+  private panning = false;
+  private panStartX = 0;
+  private panStartY = 0;
+  private panOriginX = 0;
+  private panOriginY = 0;
+  private pendingClick = -1;
+
   private params: ForceParams = defaultForceParams(0, 0);
   private alpha = 1;
   private rafId: number | null = null;
@@ -116,6 +161,8 @@ class SecretMap implements SecretMapController {
   private readonly onPointerMove = (e: PointerEvent) => this.handlePointerMove(e);
   private readonly onPointerUp = (e: PointerEvent) => this.handlePointerUp(e);
   private readonly onPointerLeave = () => this.clearHover();
+  private readonly onWheel = (e: WheelEvent) => this.handleWheel(e);
+  private readonly onControlsClick = (e: MouseEvent) => this.handleControlsClick(e);
   private readonly onVisibility = () => this.handleVisibility();
   private readonly onThemeChange = () => {
     this.palette = null;
@@ -156,22 +203,31 @@ class SecretMap implements SecretMapController {
     this.themeObserver?.disconnect();
     this.motionQuery?.removeEventListener('change', this.onThemeChange);
     document.removeEventListener('visibilitychange', this.onVisibility);
+    this.controls?.removeEventListener('click', this.onControlsClick);
+    this.canvas?.removeEventListener('wheel', this.onWheel);
     this.canvas?.remove();
     this.tooltip?.remove();
     this.banner?.remove();
+    this.controls?.remove();
     this.srList?.remove();
     this.canvas = null;
     this.ctx = null;
     this.tooltip = null;
     this.banner = null;
+    this.controls = null;
     this.srList = null;
     this.container = null;
     this.model = { nodes: [], edges: [] };
     this.sim = [];
     this.simEdges = [];
     this.signature = '';
+    this.treeModel = { nodes: [], edges: [] };
+    this.treePos = [];
+    this.treeRenderLimit = 0;
     this.hovered = -1;
     this.dragging = -1;
+    this.panning = false;
+    this.pendingClick = -1;
     this.palette = null;
   }
 
@@ -190,6 +246,9 @@ class SecretMap implements SecretMapController {
     canvas.addEventListener('pointermove', this.onPointerMove);
     canvas.addEventListener('pointerup', this.onPointerUp);
     canvas.addEventListener('pointerleave', this.onPointerLeave);
+    canvas.addEventListener('wheel', this.onWheel, { passive: false });
+
+    this.controls = this.createControls();
 
     const tooltip = document.createElement('div');
     tooltip.className =
@@ -218,6 +277,9 @@ class SecretMap implements SecretMapController {
     if (this.banner) {
       container.appendChild(this.banner);
     }
+    if (this.controls) {
+      container.appendChild(this.controls);
+    }
     if (this.tooltip) {
       container.appendChild(this.tooltip);
     }
@@ -228,9 +290,88 @@ class SecretMap implements SecretMapController {
     this.ro?.observe(container);
   }
 
-  /** Map TreeState → the pure model, (re)build the simulation, preserving positions. */
+  /** Build the Tree/Force + zoom control overlay (local UI — no host round-trip). */
+  private createControls(): HTMLDivElement {
+    const bar = document.createElement('div');
+    bar.className =
+      'absolute right-0 top-0 z-20 m-2 flex items-center gap-1 rounded border border-border bg-bg p-1 text-xs';
+    const btn = (action: string, label: string, ariaLabel: string): string =>
+      `<button type="button" data-map-action="${action}" aria-label="${ariaLabel}" ` +
+      `class="px-1.5 py-0.5 rounded border border-border text-fg hover:bg-badge">${label}</button>`;
+    bar.innerHTML =
+      btn('mode-tree', 'Tree', 'Tree layout') +
+      btn('mode-force', 'Force', 'Force-directed layout') +
+      `<span class="mx-1 w-px self-stretch bg-border"></span>` +
+      btn('zoom-out', '−', 'Zoom out') +
+      btn('zoom-in', '+', 'Zoom in') +
+      btn('fit', 'Fit', 'Fit to view');
+    bar.addEventListener('click', this.onControlsClick);
+    this.syncControls(bar);
+    return bar;
+  }
+
+  /** Reflect the active layout mode on the toggle buttons. */
+  private syncControls(bar: HTMLElement | null = this.controls): void {
+    if (!bar) {
+      return;
+    }
+    bar.querySelectorAll<HTMLElement>('[data-map-action^="mode-"]').forEach((el) => {
+      const active = el.dataset.mapAction === `mode-${this.layoutMode}`;
+      el.setAttribute('aria-pressed', String(active));
+      el.classList.toggle('bg-badge', active);
+      el.classList.toggle('text-badgeFg', active);
+    });
+  }
+
+  private handleControlsClick(e: MouseEvent): void {
+    const target = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-map-action]');
+    const action = target?.dataset.mapAction;
+    if (!action) {
+      return;
+    }
+    switch (action) {
+      case 'mode-tree':
+        this.setMode('tree');
+        break;
+      case 'mode-force':
+        this.setMode('force');
+        break;
+      case 'zoom-in':
+        this.zoomAt(this.width / 2, this.height / 2, 1.2);
+        break;
+      case 'zoom-out':
+        this.zoomAt(this.width / 2, this.height / 2, 1 / 1.2);
+        break;
+      case 'fit':
+        this.fitToView();
+        this.requestDraw();
+        break;
+    }
+  }
+
+  /** Switch layout mode: cancel the force loop when leaving it, re-fit, redraw. */
+  private setMode(mode: LayoutMode): void {
+    if (mode === this.layoutMode) {
+      return;
+    }
+    this.layoutMode = mode;
+    this.clearHover();
+    this.dragging = -1;
+    this.panning = false;
+    this.pendingClick = -1;
+    this.fitPending = true; // reframe for the layout we're switching to
+    if (mode === 'force') {
+      // Force self-centres via gravity; reset any tree pan/zoom to its identity camera.
+      this.camera = { offsetX: 0, offsetY: 0, scale: 1 };
+    }
+    this.syncControls();
+    this.renderBanner();
+    this.kick();
+  }
+
+  /** Map TreeState → the pure models, (re)build the simulation, preserving positions. */
   private buildFromTree(tree: TreeState, reheat: boolean): void {
-    const model = buildGraphModel({
+    const input: GraphInput = {
       secrets: tree.secrets.map((s) => ({
         fingerprint: s.fingerprint,
         ruleName: s.ruleName,
@@ -243,12 +384,23 @@ class SecretMap implements SecretMapController {
           firstLoc: f.occurrences[0].loc,
         })),
       })),
-    });
+    };
+    const model = buildGraphModel(input);
 
     const signature = model.nodes.map((n) => n.id).join('\n');
     if (signature === this.signature && this.sim.length > 0) {
       return; // unchanged data — don't disturb the layout
     }
+
+    // Build the tidy tree once from the same input; it is deterministic and canvas-independent,
+    // so it never needs the position-preservation that the force layout does.
+    this.treeModel = buildTreeModel(input);
+    const layout = treeLayout(this.treeModel);
+    this.treePos = layout.positions;
+    this.treeBounds = layout.bounds;
+    this.treePolicy = capForNodeCount(this.treeModel.nodes.length);
+    this.treeRenderLimit = this.treePolicy.renderLimit;
+    this.fitPending = true; // new data → reframe on the next kick
 
     const policy = capForNodeCount(model.nodes.length);
     const usedNodes = model.nodes.slice(0, policy.renderLimit);
@@ -293,8 +445,21 @@ class SecretMap implements SecretMapController {
     return this.policy.animate && !this.reducedMotion;
   }
 
-  /** Start animating, or compute a settled static layout, depending on policy/motion. */
+  /** Start animating, or compute a settled static layout, depending on mode/policy/motion. */
   private kick(): void {
+    if (this.layoutMode === 'tree') {
+      // The tree is static: stop any in-flight force frame, (re)frame if needed, draw once.
+      if (this.rafId !== null) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+      }
+      if (this.fitPending) {
+        this.fitToView();
+        this.fitPending = false;
+      }
+      this.draw();
+      return;
+    }
     if (this.sim.length === 0) {
       this.draw();
       return;
@@ -307,14 +472,14 @@ class SecretMap implements SecretMapController {
   }
 
   private startLoop(): void {
-    if (this.shouldAnimate() && this.rafId === null && !this.paused) {
+    if (this.layoutMode === 'force' && this.shouldAnimate() && this.rafId === null && !this.paused) {
       this.rafId = requestAnimationFrame(this.tick);
     }
   }
 
   private runTick(): void {
     this.rafId = null;
-    if (this.paused || !this.canvas) {
+    if (this.paused || !this.canvas || this.layoutMode === 'tree') {
       return;
     }
     this.alpha = forceStep(this.sim, this.simEdges, this.alpha, this.params);
@@ -340,6 +505,63 @@ class SecretMap implements SecretMapController {
     if (this.rafId === null) {
       this.draw();
     }
+  }
+
+  // ── camera (pan / zoom / fit) ────────────────────────────────────────────────
+
+  /** Map a screen (CSS-pixel) point to world coordinates through the current camera. */
+  private toWorld(sx: number, sy: number): { x: number; y: number } {
+    return {
+      x: (sx - this.camera.offsetX) / this.camera.scale,
+      y: (sy - this.camera.offsetY) / this.camera.scale,
+    };
+  }
+
+  /** Zoom by `factor` about a screen anchor, keeping that world point under the cursor. */
+  private zoomAt(sx: number, sy: number, factor: number): void {
+    const scale = clamp(this.camera.scale * factor, MIN_SCALE, MAX_SCALE);
+    const w = this.toWorld(sx, sy);
+    this.camera = { scale, offsetX: sx - w.x * scale, offsetY: sy - w.y * scale };
+    this.requestDraw();
+  }
+
+  private handleWheel(e: WheelEvent): void {
+    e.preventDefault();
+    const { x, y } = this.pointerPos(e);
+    this.zoomAt(x, y, e.deltaY < 0 ? 1.1 : 1 / 1.1);
+  }
+
+  /** World-space extent of the force simulation (with radii), for fit-to-view. */
+  private forceBounds(): LayoutBounds {
+    if (this.sim.length === 0) {
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 };
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const n of this.sim) {
+      minX = Math.min(minX, n.x - n.r);
+      minY = Math.min(minY, n.y - n.r);
+      maxX = Math.max(maxX, n.x + n.r);
+      maxY = Math.max(maxY, n.y + n.r);
+    }
+    return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+  }
+
+  /** Centre and scale the active layout to fit the canvas. */
+  private fitToView(): void {
+    const b = this.layoutMode === 'tree' ? this.treeBounds : this.forceBounds();
+    if (b.width <= 0 || b.height <= 0 || this.width <= 0 || this.height <= 0) {
+      this.camera = { offsetX: 0, offsetY: 0, scale: 1 };
+      return;
+    }
+    const scale = clamp(Math.min(this.width / b.width, this.height / b.height) * FIT_PADDING, MIN_SCALE, MAX_SCALE);
+    this.camera = {
+      scale,
+      offsetX: (this.width - b.width * scale) / 2 - b.minX * scale,
+      offsetY: (this.height - b.height * scale) / 2 - b.minY * scale,
+    };
   }
 
   private resolvePalette(): Palette {
@@ -369,7 +591,55 @@ class SecretMap implements SecretMapController {
     }
     const p = this.resolvePalette();
     ctx.clearRect(0, 0, this.width, this.height);
+    ctx.save();
+    ctx.translate(this.camera.offsetX, this.camera.offsetY);
+    ctx.scale(this.camera.scale, this.camera.scale);
+    if (this.layoutMode === 'tree') {
+      this.drawTree(ctx, p);
+    } else {
+      this.drawForce(ctx, p);
+    }
+    ctx.restore();
+  }
 
+  /** Fill/stroke a node circle (filled for secrets by severity, hollow for files). */
+  private drawNode(
+    ctx: CanvasRenderingContext2D,
+    p: Palette,
+    node: GraphNode,
+    pos: { x: number; y: number; r: number },
+    glow: boolean,
+  ): void {
+    if (node.kind === 'file') {
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = p.muted;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, pos.r, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      const color = p.severity[node.severity];
+      if (glow) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+      }
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, pos.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  /** Outlined label so text stays legible over any node colour. */
+  private drawLabel(ctx: CanvasRenderingContext2D, p: Palette, label: string, x: number, y: number): void {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.strokeText(label, x, y);
+    ctx.fillStyle = p.fg;
+    ctx.fillText(label, x, y);
+  }
+
+  private drawForce(ctx: CanvasRenderingContext2D, p: Palette): void {
     // Edges.
     ctx.globalAlpha = 0.35;
     ctx.strokeStyle = p.border;
@@ -385,27 +655,7 @@ class SecretMap implements SecretMapController {
     ctx.globalAlpha = 1;
 
     const glow = this.sim.length <= 120;
-    this.model.nodes.forEach((node, i) => {
-      const n = this.sim[i];
-      if (node.kind === 'file') {
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = p.muted;
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.stroke();
-      } else {
-        const color = p.severity[node.severity];
-        if (glow) {
-          ctx.shadowColor = color;
-          ctx.shadowBlur = 10;
-        }
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-    });
+    this.model.nodes.forEach((node, i) => this.drawNode(ctx, p, node, this.sim[i], glow));
 
     // Labels for the top few secrets (already sorted first by the host).
     ctx.font = `11px ${p.font}`;
@@ -417,23 +667,66 @@ class SecretMap implements SecretMapController {
         continue;
       }
       const n = this.sim[i];
-      const ty = n.y + n.r + 2;
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-      ctx.strokeText(node.label, n.x, ty);
-      ctx.fillStyle = p.fg;
-      ctx.fillText(node.label, n.x, ty);
+      this.drawLabel(ctx, p, node.label, n.x, n.y + n.r + 2);
     }
 
-    // Hover highlight ring.
-    if (this.hovered !== -1) {
-      const n = this.sim[this.hovered];
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = p.fg;
+    this.drawHoverRing(ctx, p, this.sim[this.hovered]);
+  }
+
+  private drawTree(ctx: CanvasRenderingContext2D, p: Palette): void {
+    const limit = this.treeRenderLimit;
+    // Elbow links from each file root down to its secret leaves.
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = p.border;
+    for (const e of this.treeModel.edges) {
+      if (e.target >= limit) {
+        continue;
+      }
+      const s = this.treePos[e.source];
+      const t = this.treePos[e.target];
+      const midY = (s.y + t.y) / 2;
+      ctx.lineWidth = Math.min(2.5, 0.5 + Math.log2(1 + e.weight) * 0.5);
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r + 3, 0, Math.PI * 2);
+      ctx.moveTo(s.x, s.y + s.r);
+      ctx.lineTo(s.x, midY);
+      ctx.lineTo(t.x, midY);
+      ctx.lineTo(t.x, t.y - t.r);
       ctx.stroke();
     }
+    ctx.globalAlpha = 1;
+
+    const glow = limit <= 120;
+    for (let i = 0; i < limit; i++) {
+      this.drawNode(ctx, p, this.treeModel.nodes[i], this.treePos[i], glow);
+    }
+
+    // File-root labels above each source node.
+    ctx.font = `11px ${p.font}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    for (let i = 0; i < limit; i++) {
+      const node = this.treeModel.nodes[i];
+      if (node.depth !== 0) {
+        continue;
+      }
+      const pos = this.treePos[i];
+      this.drawLabel(ctx, p, node.label, pos.x, pos.y - pos.r - 3);
+    }
+
+    if (this.hovered < limit) {
+      this.drawHoverRing(ctx, p, this.treePos[this.hovered]);
+    }
+  }
+
+  private drawHoverRing(ctx: CanvasRenderingContext2D, p: Palette, pos: { x: number; y: number; r: number } | undefined): void {
+    if (this.hovered === -1 || !pos) {
+      return;
+    }
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = p.fg;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, pos.r + 3, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
   // ── sizing ────────────────────────────────────────────────────────────────
@@ -460,7 +753,7 @@ class SecretMap implements SecretMapController {
     canvas.height = Math.round(h * this.dpr);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.params = { ...this.params, centerX: w / 2, centerY: h / 2 };
-    if (changed && this.shouldAnimate()) {
+    if (changed && this.layoutMode === 'force' && this.shouldAnimate()) {
       this.alpha = Math.max(this.alpha, 0.3);
       this.startLoop();
     }
@@ -479,60 +772,125 @@ class SecretMap implements SecretMapController {
 
   // ── interaction ────────────────────────────────────────────────────────────
 
-  private pointerPos(e: PointerEvent): { x: number; y: number } {
+  private pointerPos(e: PointerEvent | WheelEvent): { x: number; y: number } {
     const rect = this.canvas!.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
-  private hitTest(x: number, y: number): number {
-    for (let i = this.sim.length - 1; i >= 0; i--) {
-      const n = this.sim[i];
-      const dx = x - n.x;
-      const dy = y - n.y;
-      if (dx * dx + dy * dy <= (n.r + 4) * (n.r + 4)) {
+  /** Number of currently-rendered nodes (capped slice in tree mode). */
+  private activeCount(): number {
+    return this.layoutMode === 'tree' ? this.treeRenderLimit : this.sim.length;
+  }
+
+  /** Position+radius of the active layout's node `i`. */
+  private activePos(i: number): { x: number; y: number; r: number } | undefined {
+    return this.layoutMode === 'tree' ? this.treePos[i] : this.sim[i];
+  }
+
+  /** Display node for the active layout at index `i`. */
+  private activeNode(i: number): GraphNode | undefined {
+    return this.layoutMode === 'tree' ? this.treeModel.nodes[i] : this.model.nodes[i];
+  }
+
+  /** Hit-test in WORLD coordinates; slop stays ~constant on screen across zoom. */
+  private hitTest(wx: number, wy: number): number {
+    const slop = 4 / this.camera.scale;
+    for (let i = this.activeCount() - 1; i >= 0; i--) {
+      const pos = this.activePos(i);
+      if (!pos) {
+        continue;
+      }
+      const dx = wx - pos.x;
+      const dy = wy - pos.y;
+      const hr = pos.r + slop;
+      if (dx * dx + dy * dy <= hr * hr) {
         return i;
       }
     }
     return -1;
   }
 
+  /** True once the pointer has moved past the click/drag threshold since press. */
+  private movedPast(sx: number, sy: number): boolean {
+    return Math.abs(sx - this.downX) > 3 || Math.abs(sy - this.downY) > 3;
+  }
+
   private handlePointerDown(e: PointerEvent): void {
-    const { x, y } = this.pointerPos(e);
-    this.downX = x;
-    this.downY = y;
+    const sp = this.pointerPos(e);
+    this.downX = sp.x;
+    this.downY = sp.y;
     this.movedWhileDown = false;
-    const hit = this.hitTest(x, y);
+    const w = this.toWorld(sp.x, sp.y);
+    const hit = this.hitTest(w.x, w.y);
+
+    if (this.layoutMode === 'force') {
+      if (hit !== -1) {
+        this.dragging = hit;
+        const n = this.sim[hit];
+        n.fx = w.x;
+        n.fy = w.y;
+        n.x = w.x;
+        n.y = w.y;
+        this.canvas!.setPointerCapture(e.pointerId);
+        this.alpha = Math.max(this.alpha, 0.4);
+        this.startLoop();
+        this.requestDraw();
+      }
+      return;
+    }
+
+    // Tree mode: tap a node to jump, drag empty space to pan.
+    this.canvas!.setPointerCapture(e.pointerId);
     if (hit !== -1) {
-      this.dragging = hit;
-      const n = this.sim[hit];
-      n.fx = x;
-      n.fy = y;
-      n.x = x;
-      n.y = y;
-      this.canvas!.setPointerCapture(e.pointerId);
-      this.alpha = Math.max(this.alpha, 0.4);
-      this.startLoop();
-      this.requestDraw();
+      this.pendingClick = hit;
+    } else {
+      this.panning = true;
+      this.panStartX = sp.x;
+      this.panStartY = sp.y;
+      this.panOriginX = this.camera.offsetX;
+      this.panOriginY = this.camera.offsetY;
     }
   }
 
   private handlePointerMove(e: PointerEvent): void {
-    const { x, y } = this.pointerPos(e);
-    if (this.dragging !== -1) {
-      if (Math.abs(x - this.downX) > 3 || Math.abs(y - this.downY) > 3) {
+    const sp = this.pointerPos(e);
+
+    if (this.layoutMode === 'force' && this.dragging !== -1) {
+      if (this.movedPast(sp.x, sp.y)) {
         this.movedWhileDown = true;
       }
+      const w = this.toWorld(sp.x, sp.y);
       const n = this.sim[this.dragging];
-      n.fx = x;
-      n.fy = y;
-      n.x = x;
-      n.y = y;
+      n.fx = w.x;
+      n.fy = w.y;
+      n.x = w.x;
+      n.y = w.y;
       this.alpha = Math.max(this.alpha, 0.2);
       this.startLoop();
       this.requestDraw(); // moves the node even when the loop is gated off (reduced motion)
       return;
     }
-    const hit = this.hitTest(x, y);
+
+    if (this.layoutMode === 'tree') {
+      if (this.panning) {
+        this.camera = {
+          ...this.camera,
+          offsetX: this.panOriginX + (sp.x - this.panStartX),
+          offsetY: this.panOriginY + (sp.y - this.panStartY),
+        };
+        this.requestDraw();
+        return;
+      }
+      if (this.pendingClick !== -1) {
+        if (this.movedPast(sp.x, sp.y)) {
+          this.movedWhileDown = true;
+        }
+        return; // suppress hover while a tap is in progress
+      }
+    }
+
+    const w = this.toWorld(sp.x, sp.y);
+    const hit = this.hitTest(w.x, w.y);
     if (hit !== this.hovered) {
       this.hovered = hit;
       this.requestDraw();
@@ -540,34 +898,51 @@ class SecretMap implements SecretMapController {
     if (hit === -1) {
       this.hideTooltip();
     } else {
-      this.showTooltip(hit, x, y);
+      this.showTooltip(hit, sp.x, sp.y);
     }
   }
 
   private handlePointerUp(e: PointerEvent): void {
-    if (this.dragging !== -1) {
-      const node = this.sim[this.dragging];
-      node.fx = null;
-      node.fy = null;
-      const clicked = this.dragging;
-      this.dragging = -1;
-      this.alpha = Math.max(this.alpha, 0.3);
-      this.startLoop();
-      this.requestDraw();
-      if (!this.movedWhileDown) {
-        this.jumpTo(clicked);
+    if (this.layoutMode === 'force') {
+      if (this.dragging !== -1) {
+        const node = this.sim[this.dragging];
+        node.fx = null;
+        node.fy = null;
+        const clicked = this.dragging;
+        this.dragging = -1;
+        this.alpha = Math.max(this.alpha, 0.3);
+        this.startLoop();
+        this.requestDraw();
+        if (!this.movedWhileDown) {
+          this.jumpTo(clicked);
+        }
+        return;
+      }
+      const sp = this.pointerPos(e);
+      const w = this.toWorld(sp.x, sp.y);
+      const hit = this.hitTest(w.x, w.y);
+      if (hit !== -1 && !this.movedPast(sp.x, sp.y)) {
+        this.jumpTo(hit);
       }
       return;
     }
-    const { x, y } = this.pointerPos(e);
-    const hit = this.hitTest(x, y);
-    if (hit !== -1 && Math.abs(x - this.downX) <= 3 && Math.abs(y - this.downY) <= 3) {
-      this.jumpTo(hit);
+
+    // Tree mode.
+    if (this.panning) {
+      this.panning = false;
+      return;
+    }
+    if (this.pendingClick !== -1) {
+      const clicked = this.pendingClick;
+      this.pendingClick = -1;
+      if (!this.movedWhileDown) {
+        this.jumpTo(clicked);
+      }
     }
   }
 
   private jumpTo(index: number): void {
-    const node = this.model.nodes[index];
+    const node = this.activeNode(index);
     if (node) {
       this.send({ type: 'jumpTo', loc: node.loc });
     }
@@ -585,7 +960,7 @@ class SecretMap implements SecretMapController {
 
   private showTooltip(index: number, x: number, y: number): void {
     const tip = this.tooltip;
-    const node = this.model.nodes[index];
+    const node = this.activeNode(index);
     if (!tip || !node) {
       return;
     }
@@ -620,7 +995,9 @@ class SecretMap implements SecretMapController {
     if (!container) {
       return;
     }
-    if (!this.policy.disclosed) {
+    const tree = this.layoutMode === 'tree';
+    const policy = tree ? this.treePolicy : this.policy;
+    if (!policy.disclosed) {
       this.banner?.remove();
       this.banner = null;
       return;
@@ -629,9 +1006,11 @@ class SecretMap implements SecretMapController {
       this.banner = document.createElement('div');
       this.banner.className =
         'absolute left-0 right-0 top-0 z-10 m-2 px-2 py-1 rounded bg-badge text-badgeFg text-xs';
+      // Keep the banner above the canvas but below the controls overlay.
       container.appendChild(this.banner);
     }
-    this.banner.textContent = `Showing ${this.policy.renderLimit} of ${this.signature.split('\n').length} nodes — open the Tree view for the full list.`;
+    const total = tree ? this.treeModel.nodes.length : this.signature.split('\n').length;
+    this.banner.textContent = `Showing ${policy.renderLimit} of ${total} nodes — open the Findings list for the full list.`;
   }
 
   private renderSrList(): void {

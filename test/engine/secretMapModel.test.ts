@@ -3,8 +3,10 @@ import {
   ALPHA_MIN,
   ANIMATE_CAP,
   buildGraphModel,
+  buildTreeModel,
   capForNodeCount,
   defaultForceParams,
+  defaultTreeLayoutParams,
   FILE_RADIUS,
   forceStep,
   kineticEnergy,
@@ -13,6 +15,7 @@ import {
   SECRET_RADIUS,
   seedPosition,
   severityColorVars,
+  treeLayout,
   type GraphInputSecret,
   type SimEdge,
   type SimNode,
@@ -118,6 +121,219 @@ describe('buildGraphModel', () => {
     expect(node.preview).toBe('AKIA…****');
     expect(node.fileCount).toBe(1);
     expect(node.loc).toEqual(loc('jump', 7, 27));
+  });
+});
+
+describe('buildTreeModel', () => {
+  it('duplicates a shared secret into one leaf per file, with a root + edge each', () => {
+    const model = buildTreeModel({
+      secrets: [
+        secret({
+          fingerprint: 'fp',
+          totalCount: 6,
+          files: [
+            { file: 'src/a.ts', count: 1, firstLoc: loc('a') },
+            { file: 'src/b.ts', count: 2, firstLoc: loc('b') },
+            { file: 'src/c.ts', count: 3, firstLoc: loc('c') },
+          ],
+        }),
+      ],
+    });
+    const roots = model.nodes.filter((n) => n.depth === 0);
+    const leaves = model.nodes.filter((n) => n.depth === 1);
+    expect(roots).toHaveLength(3); // one root per distinct file
+    expect(leaves).toHaveLength(3); // the secret duplicated under each file
+    expect(model.edges).toHaveLength(3);
+    expect(roots.every((r) => r.kind === 'file' && r.parent === null)).toBe(true);
+    expect(leaves.every((l) => l.kind === 'secret')).toBe(true);
+  });
+
+  it("gives each leaf the per-pair count (not the secret's total) and the secret's file count", () => {
+    const model = buildTreeModel({
+      secrets: [
+        secret({
+          fingerprint: 'fp',
+          totalCount: 9,
+          files: [
+            { file: 'src/a.ts', count: 2, firstLoc: loc('a', 1, 5) },
+            { file: 'src/b.ts', count: 7, firstLoc: loc('b', 3, 9) },
+          ],
+        }),
+      ],
+    });
+    const leaves = model.nodes.filter((n) => n.depth === 1);
+    expect(leaves.map((l) => l.count).sort((x, y) => x - y)).toEqual([2, 7]);
+    expect(leaves.every((l) => l.fileCount === 2)).toBe(true);
+    // The leaf jumps to the occurrence in ITS file, not the secret's first overall.
+    const leafB = leaves.find((l) => l.count === 7);
+    expect(leafB?.loc).toEqual(loc('b', 3, 9));
+  });
+
+  it('aggregates a file root shared by several secrets (count, secretCount, severity)', () => {
+    const model = buildTreeModel({
+      secrets: [
+        secret({ fingerprint: 'fp1', severity: 'high', files: [{ file: 'src/x.ts', count: 2, firstLoc: loc('u1') }] }),
+        secret({ fingerprint: 'fp2', severity: 'critical', files: [{ file: 'src/x.ts', count: 5, firstLoc: loc('u2') }] }),
+      ],
+    });
+    const root = model.nodes.find((n) => n.depth === 0);
+    expect(root?.count).toBe(7); // 2 + 5
+    expect(root?.secretCount).toBe(2);
+    expect(root?.severity).toBe('critical'); // upgraded high → critical
+    expect(root?.loc.uri).toBe('u1'); // keeps the first secret's loc for this file
+  });
+
+  it('orders roots by first appearance and labels them by basename (posix/windows/none)', () => {
+    const model = buildTreeModel({
+      secrets: [
+        secret({ fingerprint: 'a', files: [{ file: 'src/deep/config.ts', count: 1, firstLoc: loc('u') }] }),
+        secret({ fingerprint: 'b', files: [{ file: 'src\\win\\db.ts', count: 1, firstLoc: loc('u') }] }),
+        secret({ fingerprint: 'c', files: [{ file: '.env', count: 1, firstLoc: loc('u') }] }),
+      ],
+    });
+    const roots = model.nodes.filter((n) => n.depth === 0);
+    expect(roots.map((r) => r.label)).toEqual(['config.ts', 'db.ts', '.env']);
+  });
+
+  it('places all roots before any leaf, with edges from root → its leaves', () => {
+    const model = buildTreeModel({
+      secrets: [
+        secret({ fingerprint: 'fp1', files: [{ file: 'src/a.ts', count: 1, firstLoc: loc('a') }] }),
+        secret({ fingerprint: 'fp2', files: [{ file: 'src/b.ts', count: 1, firstLoc: loc('b') }] }),
+      ],
+    });
+    const firstLeaf = model.nodes.findIndex((n) => n.depth === 1);
+    expect(model.nodes.slice(0, firstLeaf).every((n) => n.depth === 0)).toBe(true);
+    for (const e of model.edges) {
+      expect(model.nodes[e.source].depth).toBe(0);
+      expect(model.nodes[e.target].depth).toBe(1);
+      expect(model.nodes[e.target].parent).toBe(e.source);
+    }
+  });
+
+  it('handles empty input', () => {
+    const model = buildTreeModel({ secrets: [] });
+    expect(model.nodes).toHaveLength(0);
+    expect(model.edges).toHaveLength(0);
+  });
+
+  it('handles a single secret in a single file (1 root, 1 leaf, 1 edge)', () => {
+    const model = buildTreeModel({
+      secrets: [secret({ fingerprint: 'fp', files: [{ file: 'src/a.ts', count: 1, firstLoc: loc('a') }] })],
+    });
+    expect(model.nodes.filter((n) => n.depth === 0)).toHaveLength(1);
+    expect(model.nodes.filter((n) => n.depth === 1)).toHaveLength(1);
+    expect(model.edges).toHaveLength(1);
+  });
+});
+
+describe('treeLayout', () => {
+  const sample = () =>
+    buildTreeModel({
+      secrets: [
+        secret({
+          fingerprint: 'fp1',
+          files: [
+            { file: 'src/a.ts', count: 1, firstLoc: loc('a') },
+            { file: 'src/b.ts', count: 1, firstLoc: loc('b') },
+          ],
+        }),
+        secret({ fingerprint: 'fp2', files: [{ file: 'src/a.ts', count: 1, firstLoc: loc('a2') }] }),
+      ],
+    });
+
+  it('keeps every node within the reported bounds, and bounds are well-formed', () => {
+    const model = sample();
+    const { positions, bounds } = treeLayout(model);
+    expect(positions).toHaveLength(model.nodes.length);
+    expect(bounds.width).toBeGreaterThan(0);
+    expect(bounds.height).toBeGreaterThan(0);
+    expect(bounds.width).toBeCloseTo(bounds.maxX - bounds.minX, 5);
+    for (const pos of positions) {
+      expect(pos.x - pos.r).toBeGreaterThanOrEqual(bounds.minX);
+      expect(pos.x + pos.r).toBeLessThanOrEqual(bounds.maxX);
+      expect(pos.y - pos.r).toBeGreaterThanOrEqual(bounds.minY);
+      expect(pos.y + pos.r).toBeLessThanOrEqual(bounds.maxY);
+    }
+  });
+
+  it('puts roots on a shared top tier and leaves on a shared lower tier', () => {
+    const model = sample();
+    const { positions } = treeLayout(model);
+    const rootYs = model.nodes.map((n, i) => (n.depth === 0 ? positions[i].y : null)).filter((y): y is number => y !== null);
+    const leafYs = model.nodes.map((n, i) => (n.depth === 1 ? positions[i].y : null)).filter((y): y is number => y !== null);
+    expect(new Set(rootYs).size).toBe(1);
+    expect(new Set(leafYs).size).toBe(1);
+    expect(leafYs[0]).toBeGreaterThan(rootYs[0]);
+  });
+
+  it('centres a root over the mean of its leaves', () => {
+    const model = sample();
+    const { positions } = treeLayout(model);
+    model.nodes.forEach((n, i) => {
+      if (n.depth !== 0) {
+        return;
+      }
+      const kidXs = model.nodes
+        .map((c, j) => (c.parent === i ? positions[j].x : null))
+        .filter((x): x is number => x !== null);
+      const mean = kidXs.reduce((s, x) => s + x, 0) / kidXs.length;
+      expect(positions[i].x).toBeCloseTo(mean, 5);
+    });
+  });
+
+  it('does not overlap adjacent roots or sibling leaves', () => {
+    const model = sample();
+    const { positions } = treeLayout(model);
+    const rootIdx = model.nodes.map((n, i) => (n.depth === 0 ? i : -1)).filter((i) => i >= 0);
+    for (let k = 1; k < rootIdx.length; k++) {
+      const a = positions[rootIdx[k - 1]];
+      const b = positions[rootIdx[k]];
+      expect(b.x - a.x).toBeGreaterThanOrEqual(a.r + b.r);
+    }
+    // Sibling leaves under the first root keep at least their radii apart.
+    const firstRoot = rootIdx[0];
+    const sibs = model.nodes.map((n, i) => (n.parent === firstRoot ? i : -1)).filter((i) => i >= 0);
+    for (let k = 1; k < sibs.length; k++) {
+      const a = positions[sibs[k - 1]];
+      const b = positions[sibs[k]];
+      expect(b.x - a.x).toBeGreaterThanOrEqual(a.r + b.r);
+    }
+  });
+
+  it('is deterministic and sizes radii via nodeRadius', () => {
+    const model = sample();
+    expect(treeLayout(model)).toEqual(treeLayout(model));
+    const { positions } = treeLayout(model);
+    model.nodes.forEach((n, i) => {
+      const scale = n.kind === 'secret' ? SECRET_RADIUS : FILE_RADIUS;
+      expect(positions[i].r).toBe(nodeRadius(n.count, scale));
+    });
+  });
+
+  it('accepts explicit params and matches the default when given the defaults', () => {
+    const model = sample();
+    expect(treeLayout(model, defaultTreeLayoutParams())).toEqual(treeLayout(model));
+    const wide = treeLayout(model, { ...defaultTreeLayoutParams(), fileGapX: 200 });
+    expect(wide.bounds.width).toBeGreaterThan(treeLayout(model).bounds.width);
+  });
+
+  it('returns empty positions and zero bounds for an empty model', () => {
+    const layout = treeLayout({ nodes: [], edges: [] });
+    expect(layout.positions).toHaveLength(0);
+    expect(layout.bounds).toEqual({ minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 });
+  });
+});
+
+describe('defaultTreeLayoutParams', () => {
+  it('returns the documented spacing constants', () => {
+    expect(defaultTreeLayoutParams()).toEqual({
+      fileGapX: 48,
+      leafGapX: 28,
+      tierGapY: 90,
+      marginX: 24,
+      marginY: 24,
+    });
   });
 });
 

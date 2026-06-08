@@ -82,12 +82,13 @@ export interface GraphModel {
 }
 
 /** Last path segment, handling both POSIX and Windows separators. */
-function basename(path: string): string {
+export function basename(path: string): string {
   const slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
   return slash === -1 ? path : path.slice(slash + 1);
 }
 
-function moreSevere(a: Severity, b: Severity): Severity {
+/** The more severe of two severities (critical < high < medium < low by rank). */
+export function moreSevere(a: Severity, b: Severity): Severity {
   return SEVERITY_RANK[a] <= SEVERITY_RANK[b] ? a : b;
 }
 
@@ -379,4 +380,234 @@ export function forceStep(
   }
 
   return alpha * params.alphaDecay;
+}
+
+// ── tidy top-down tree layout ────────────────────────────────────────────────
+
+/**
+ * A node in the strict two-tier tree: file roots on top, secret leaves below. Unlike the
+ * bipartite {@link GraphModel} (where a shared secret is one node with several edges), a secret
+ * appearing in N files is **duplicated** into N distinct leaves — one under each file — so every
+ * file's subtree is independent and the layout reads as a clean tree.
+ */
+export interface TreeGraphNode extends GraphNode {
+  /** 0 = file root, 1 = secret leaf. */
+  readonly depth: 0 | 1;
+  /** Index of the owning file root, or null for a root. */
+  readonly parent: number | null;
+}
+
+/** An edge from a file root to one of its secret leaves. Indices point into the node array. */
+export interface TreeGraphEdge {
+  readonly source: number;
+  readonly target: number;
+  readonly weight: number;
+}
+
+/** The built tree: roots first (in first-appearance order), then leaves. */
+export interface TreeGraphModel {
+  readonly nodes: readonly TreeGraphNode[];
+  readonly edges: readonly TreeGraphEdge[];
+}
+
+/**
+ * Build the strict file→secret tree. File roots are created in first-appearance order and carry
+ * the same aggregate semantics as the bipartite file nodes (summed count, distinct secret count,
+ * most-severe severity). Each (secret, file) pair becomes its own leaf — a secret in several files
+ * is duplicated under each — with the leaf's `count` being the per-pair occurrence count (not the
+ * secret's total). Deterministic: no clock, no randomness.
+ */
+export function buildTreeModel(input: GraphInput): TreeGraphModel {
+  const roots: TreeGraphNode[] = [];
+  const fileIndex = new Map<string, number>();
+
+  // Pass 1: file roots (created on first appearance), aggregating across the secrets in them.
+  for (const secret of input.secrets) {
+    for (const f of secret.files) {
+      const existing = fileIndex.get(f.file);
+      if (existing === undefined) {
+        fileIndex.set(f.file, roots.length);
+        roots.push({
+          id: `tfile:${f.file}`,
+          kind: 'file',
+          label: basename(f.file),
+          title: f.file,
+          severity: secret.severity,
+          count: f.count,
+          secretCount: 1,
+          loc: f.firstLoc,
+          depth: 0,
+          parent: null,
+        });
+      } else {
+        const node = roots[existing];
+        roots[existing] = {
+          ...node,
+          severity: moreSevere(node.severity, secret.severity),
+          count: node.count + f.count,
+          secretCount: (node.secretCount as number) + 1,
+        };
+      }
+    }
+  }
+
+  // Pass 2: secret leaves + edges (roots come first in the node array, so root indices are stable).
+  const nodes: TreeGraphNode[] = [...roots];
+  const edges: TreeGraphEdge[] = [];
+  for (const secret of input.secrets) {
+    for (const f of secret.files) {
+      // Every leaf's file was seen in pass 1, so the root index is always defined.
+      const parent = fileIndex.get(f.file) as number;
+      const leafIndex = nodes.length;
+      nodes.push({
+        id: `tsecret:${secret.fingerprint}@${f.file}`,
+        kind: 'secret',
+        label: secret.ruleName,
+        title: secret.ruleName,
+        severity: secret.severity,
+        preview: secret.preview,
+        count: f.count,
+        fileCount: secret.files.length,
+        loc: f.firstLoc,
+        depth: 1,
+        parent,
+      });
+      edges.push({ source: parent, target: leafIndex, weight: f.count });
+    }
+  }
+
+  return { nodes, edges };
+}
+
+/** A laid-out node position with its draw radius. Parallel to {@link TreeGraphModel.nodes}. */
+export interface TreePosition {
+  readonly x: number;
+  readonly y: number;
+  readonly r: number;
+}
+
+/** Axis-aligned extent of a laid-out tree, padded by margins — used for fit-to-view. */
+export interface LayoutBounds {
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** A computed tree layout: one position per node (by index) plus the overall bounds. */
+export interface TreeLayout {
+  readonly positions: readonly TreePosition[];
+  readonly bounds: LayoutBounds;
+}
+
+/** Spacing tunables for {@link treeLayout}, in world units. */
+export interface TreeLayoutParams {
+  /** Horizontal gap between adjacent file subtrees. */
+  readonly fileGapX: number;
+  /** Horizontal gap between sibling secret leaves. */
+  readonly leafGapX: number;
+  /** Vertical distance from the root tier to the leaf tier (centre to centre). */
+  readonly tierGapY: number;
+  /** Padding added around the whole tree in the reported bounds. */
+  readonly marginX: number;
+  readonly marginY: number;
+}
+
+/** Sensible default spacing for {@link treeLayout}. */
+export function defaultTreeLayoutParams(): TreeLayoutParams {
+  return { fileGapX: 48, leafGapX: 28, tierGapY: 90, marginX: 24, marginY: 24 };
+}
+
+const EMPTY_BOUNDS: LayoutBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 };
+
+/**
+ * Position a {@link TreeGraphModel} as a tidy two-tier tree: file roots packed left→right with
+ * each root's secret leaves centred in a single row beneath it. A single pass suffices because
+ * leaves never have children, so subtree widths cannot collide across tiers. World coordinates
+ * only — the webview camera maps them to the screen, so the layout is independent of canvas size
+ * and fully deterministic. Every file root is guaranteed at least one leaf (a file exists only
+ * because a secret references it).
+ */
+export function treeLayout(model: TreeGraphModel, params?: TreeLayoutParams): TreeLayout {
+  const p = params ?? defaultTreeLayoutParams();
+  const positions: TreePosition[] = new Array(model.nodes.length);
+
+  if (model.nodes.length === 0) {
+    return { positions, bounds: EMPTY_BOUNDS };
+  }
+
+  // Radii per node, and the leaves owned by each root (in node order).
+  const radii = model.nodes.map((n) =>
+    nodeRadius(n.count, n.kind === 'secret' ? SECRET_RADIUS : FILE_RADIUS),
+  );
+  const childrenOf = new Map<number, number[]>();
+  model.nodes.forEach((n, i) => {
+    if (n.depth === 1 && n.parent !== null) {
+      const list = childrenOf.get(n.parent);
+      if (list) {
+        list.push(i);
+      } else {
+        childrenOf.set(n.parent, [i]);
+      }
+    }
+  });
+
+  // Tier y-positions: roots on top, leaves one tier below.
+  let maxRootR = 0;
+  model.nodes.forEach((n, i) => {
+    if (n.depth === 0 && radii[i] > maxRootR) {
+      maxRootR = radii[i];
+    }
+  });
+  const rootY = p.marginY + maxRootR;
+  const leafY = rootY + p.tierGapY;
+
+  // Pack roots left→right; place each root's leaves centred under it.
+  let cursorX = p.marginX;
+  model.nodes.forEach((n, i) => {
+    if (n.depth !== 0) {
+      return;
+    }
+    // Invariant (see buildTreeModel): every file root has ≥1 leaf, so this is always defined.
+    const kids = childrenOf.get(i) as number[];
+    const leafRowWidth =
+      kids.reduce((sum, k) => sum + 2 * radii[k], 0) + p.leafGapX * Math.max(0, kids.length - 1);
+    const subtreeW = Math.max(2 * radii[i], leafRowWidth);
+    const rootX = cursorX + subtreeW / 2;
+    positions[i] = { x: rootX, y: rootY, r: radii[i] };
+
+    // Lay leaves out in a row centred on the root, with exact pairwise spacing.
+    let leafX = rootX - leafRowWidth / 2;
+    for (const k of kids) {
+      const r = radii[k];
+      leafX += r;
+      positions[k] = { x: leafX, y: leafY, r };
+      leafX += r + p.leafGapX;
+    }
+
+    cursorX += subtreeW + p.fileGapX;
+  });
+
+  // Bounds over every placed node, padded by the margins.
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const pos of positions) {
+    minX = Math.min(minX, pos.x - pos.r);
+    minY = Math.min(minY, pos.y - pos.r);
+    maxX = Math.max(maxX, pos.x + pos.r);
+    maxY = Math.max(maxY, pos.y + pos.r);
+  }
+  minX -= p.marginX;
+  minY -= p.marginY;
+  maxX += p.marginX;
+  maxY += p.marginY;
+
+  return {
+    positions,
+    bounds: { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY },
+  };
 }
