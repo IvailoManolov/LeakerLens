@@ -7,3 +7,4 @@ coverage/
 *.vsix
 *.log
 .sandbox/
+.env
