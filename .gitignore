@@ -8,3 +8,4 @@ coverage/
 *.log
 .sandbox/
 .env
+.claude/settings.local.json

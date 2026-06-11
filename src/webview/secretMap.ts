@@ -72,6 +72,9 @@ const SEVERITY_FALLBACK: Record<Severity, string> = {
   low: '#3794ff',
 };
 
+/** Hardcoded fallback green for safe (.env gitignored) nodes, matching the editor underline. */
+const SAFE_FALLBACK = '#3fb950';
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -98,6 +101,8 @@ interface Palette {
   border: string;
   font: string;
   severity: Record<Severity, string>;
+  /** Fill colour for safe (gitignored .env) secret nodes. */
+  safe: string;
 }
 
 class SecretMap implements SecretMapController {
@@ -112,6 +117,12 @@ class SecretMap implements SecretMapController {
   private sim: SimNode[] = [];
   private simEdges: SimEdge[] = [];
   private signature = '';
+  /**
+   * IDs of secret graph nodes that are "safe" (live exclusively in gitignored .env files).
+   * Maintained in parallel with `model.nodes` — we cannot add `safe` to the engine's
+   * `GraphNode` type, so we track it here in the webview shell instead.
+   */
+  private safeNodeIds = new Set<string>();
   private policy: RenderPolicy = { animate: true, renderLimit: 0, disclosed: false };
 
   // Tree layout (the default view): a static, tidy file→secret tree.
@@ -221,6 +232,7 @@ class SecretMap implements SecretMapController {
     this.sim = [];
     this.simEdges = [];
     this.signature = '';
+    this.safeNodeIds = new Set();
     this.treeModel = { nodes: [], edges: [] };
     this.treePos = [];
     this.treeRenderLimit = 0;
@@ -371,6 +383,12 @@ class SecretMap implements SecretMapController {
 
   /** Map TreeState → the pure models, (re)build the simulation, preserving positions. */
   private buildFromTree(tree: TreeState, reheat: boolean): void {
+    // Collect safe fingerprints before mapping — the engine's GraphInputSecret has no `safe`
+    // field, so we track which node IDs are safe locally and apply the green fill in drawNode.
+    const safeFingerprints = new Set(
+      tree.secrets.filter((s) => s.safe).map((s) => s.fingerprint),
+    );
+
     const input: GraphInput = {
       secrets: tree.secrets.map((s) => ({
         fingerprint: s.fingerprint,
@@ -429,6 +447,13 @@ class SecretMap implements SecretMapController {
     this.model = { nodes: usedNodes, edges: usedEdges };
     this.signature = signature;
     this.policy = policy;
+
+    // Rebuild the safe-node index from the fingerprints we collected above. A secret node's
+    // graph ID is always `secret:<fingerprint>` (see buildGraphModel in secretMapModel.ts).
+    this.safeNodeIds = new Set(
+      [...safeFingerprints].map((fp) => `secret:${fp}`),
+    );
+
     this.hovered = -1;
     this.dragging = -1;
     if (reheat) {
@@ -580,6 +605,9 @@ class SecretMap implements SecretMapController {
         medium: cssVar(severityColorVars('medium'), SEVERITY_FALLBACK.medium),
         low: cssVar(severityColorVars('low'), SEVERITY_FALLBACK.low),
       },
+      // Safe nodes use the same green as the editor's gitignored .env underline decoration
+      // (`--vscode-charts-green`) with a stable hex fallback.
+      safe: cssVar(['--vscode-charts-green', '--vscode-testing-iconPassed'], SAFE_FALLBACK),
     };
     return this.palette;
   }
@@ -617,7 +645,9 @@ class SecretMap implements SecretMapController {
       ctx.arc(pos.x, pos.y, pos.r, 0, Math.PI * 2);
       ctx.stroke();
     } else {
-      const color = p.severity[node.severity];
+      // Safe secret nodes (gitignored .env) render in calm green instead of the severity
+      // color so they visually match the green section in the List and Tree views.
+      const color = this.safeNodeIds.has(node.id) ? p.safe : p.severity[node.severity];
       if (glow) {
         ctx.shadowColor = color;
         ctx.shadowBlur = 10;
@@ -978,8 +1008,14 @@ class SecretMap implements SecretMapController {
 
   private tooltipHtml(node: GraphNode): string {
     if (node.kind === 'secret') {
+      // Safe nodes get an extra "Safe (.env)" badge so the tooltip is coherent with the
+      // green fill — it's clear this isn't a red leak, just a well-placed secret.
+      const safeBadge = this.safeNodeIds.has(node.id)
+        ? `<div class="text-ok">Safe (.env gitignored)</div>`
+        : '';
       return (
         `<div class="font-medium">${escapeHtml(node.label)}</div>` +
+        safeBadge +
         `<div class="font-mono break-all">${escapeHtml(node.preview ?? '')}</div>` +
         `<div class="text-muted">${node.count} reference(s) · ${node.fileCount ?? 0} file(s)</div>`
       );

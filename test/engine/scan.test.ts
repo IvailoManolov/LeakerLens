@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_RULESET, IGNORE_MARKER, scanText } from '../../src/engine';
 import { awsAccessKeyRule } from '../../src/engine/rules/aws';
+import type { Rule } from '../../src/engine/types';
 
 const FILE = 'src/app.ts';
 const scan = (text: string, filename = FILE) => scanText(text, { filename });
@@ -80,5 +81,71 @@ describe('scanText mechanics', () => {
     const f = scanText(AWS, { filename: FILE, ruleset: { rules: [awsAccessKeyRule] } });
     expect(f).toHaveLength(1);
     expect(f[0].ruleId).toBe('aws-access-key-id');
+  });
+
+  // --- compareFindings tiebreaker coverage ---
+
+  it('compareFindings end tiebreaker: same start+severity, longer match wins (b.end - a.end branch)', () => {
+    // Two rules match at the same start with the same severity but different lengths.
+    // The longer match (higher end) should be sorted first and survive deduplication.
+    const shorter: Rule = {
+      id: 'zzz-shorter',
+      name: 'Shorter',
+      severity: 'high',
+      pattern: /SECRET_A/g,
+      message: 'test',
+      mask: (v) => v,
+    };
+    const longer: Rule = {
+      id: 'aaa-longer',
+      name: 'Longer',
+      severity: 'high',
+      pattern: /SECRET_ABC/g,
+      message: 'test',
+      mask: (v) => v,
+    };
+    // 'SECRET_ABC' contains 'SECRET_A', so both rules fire at the same start offset;
+    // the longer rule's end is further right (9 chars vs 8 chars).
+    const f = scanText('const x = SECRET_ABC', {
+      filename: FILE,
+      ruleset: { rules: [shorter, longer] },
+    });
+    // dedupeOverlaps collapses them to exactly ONE finding.
+    expect(f).toHaveLength(1);
+    // The longer match wins (b.end - a.end sort puts bigger-end first).
+    expect(f[0].ruleId).toBe('aaa-longer');
+  });
+
+  it('compareFindings ruleId tiebreaker: same start+severity+end, lexicographically smaller ruleId wins', () => {
+    // Two rules match the EXACT same span (same start, same end) with the same severity.
+    // The ruleId.localeCompare branch is the only remaining tiebreaker — the
+    // lexicographically smaller ruleId is sorted first and thus survives deduplication.
+    const TOKEN = 'TOPSECRET';
+    const ruleA: Rule = {
+      id: 'aaa-rule',
+      name: 'Rule A',
+      severity: 'medium',
+      pattern: /TOPSECRET/g,
+      message: 'test',
+      mask: (v) => v,
+    };
+    const ruleZ: Rule = {
+      id: 'zzz-rule',
+      name: 'Rule Z',
+      severity: 'medium',
+      pattern: /TOPSECRET/g,
+      message: 'test',
+      mask: (v) => v,
+    };
+    // With ruleZ listed first in the ruleset, collectMatches adds ruleZ's finding before
+    // ruleA's — but compareFindings must sort them so aaa-rule comes first.
+    const f = scanText(`const s = ${TOKEN}`, {
+      filename: FILE,
+      ruleset: { rules: [ruleZ, ruleA] },
+    });
+    // dedupeOverlaps must collapse both to exactly ONE finding.
+    expect(f).toHaveLength(1);
+    // The lexicographically smaller ruleId wins.
+    expect(f[0].ruleId).toBe('aaa-rule');
   });
 });

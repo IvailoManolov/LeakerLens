@@ -1,13 +1,12 @@
+import { basename } from 'path';
 import * as vscode from 'vscode';
 import { readConfig } from './config';
 import type { ScanController } from './scanController';
 import type { PanelController } from './panel/panelController';
 import { applyRemediation, type RemediationArg } from './remediation';
 import { installPreCommitHook, uninstallPreCommitHook } from './git/preCommit';
+import { SCAN_EXCLUDE, SCAN_LIMIT } from './scanScope';
 import type { License } from '../license/license';
-
-const SCAN_EXCLUDE = '**/{node_modules,.git,dist,out,build,.vscode-test,coverage}/**';
-const SCAN_LIMIT = 5000;
 
 /** Register every contributed command. */
 export function registerCommands(
@@ -25,6 +24,9 @@ export function registerCommands(
     vscode.commands.registerCommand('leaklens.applyRemediation', (arg: RemediationArg) =>
       applyRemediation(arg, controller),
     ),
+    vscode.commands.registerCommand('leaklens.addEnvToGitignore', (uriStr: string) =>
+      addEnvToGitignore(uriStr, controller),
+    ),
     vscode.commands.registerCommand('leaklens.installGitHook', () =>
       installGitHook(context.extensionUri, license),
     ),
@@ -35,25 +37,82 @@ export function registerCommands(
 
 async function scanWorkspace(controller: ScanController, panel: PanelController): Promise<void> {
   panel.setScanning(true);
-  let total = 0;
   try {
-    const files = await vscode.workspace.findFiles('**/*', SCAN_EXCLUDE, SCAN_LIMIT);
-    for (const file of files) {
-      try {
-        const doc = await vscode.workspace.openTextDocument(file);
-        controller.scanNow(doc);
-        total += controller.getFindings(doc.uri).length;
-      } catch {
-        // Skip unreadable/binary files.
+    await controller.runWorkspaceScan(async () => {
+      const [allFiles, envFiles] = await Promise.all([
+        vscode.workspace.findFiles('**/*', SCAN_EXCLUDE, SCAN_LIMIT),
+        // The `**/*` glob can skip dotfiles, so a `.env` may never get scanned by a workspace
+        // rescan — meaning its green "safe" secrets never appear in the panel. Enumerate the
+        // dotenv variants explicitly and merge so they're always scanned.
+        vscode.workspace.findFiles('**/{.env,.env.*,*.env}', SCAN_EXCLUDE, SCAN_LIMIT),
+      ]);
+      const seen = new Set<string>();
+      const files = [...allFiles, ...envFiles].filter((f) => {
+        const key = f.toString();
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      for (const file of files) {
+        try {
+          const doc = await vscode.workspace.openTextDocument(file);
+          await controller.scanNow(doc); // awaits env classification
+        } catch {
+          // Skip unreadable/binary files.
+        }
       }
-    }
+    });
   } finally {
     panel.setScanning(false);
+  }
+  // Count only countable findings — secrets inside gitignored `.env` files don't count.
+  let total = 0;
+  for (const findings of controller.allCountableFindings().values()) {
+    total += findings.length;
   }
   void vscode.window.showInformationMessage(
     total === 0 ? 'LeakLens: no secrets found. ✓' : `LeakLens: ${total} potential secret(s) found.`,
   );
   await vscode.commands.executeCommand('leaklens.panel.focus');
+}
+
+/**
+ * Append the `.env` file's name to the workspace `.gitignore` (creating it if missing), then
+ * re-scan so the exposed warning clears and the secrets settle into plain green.
+ */
+async function addEnvToGitignore(uriStr: string, controller: ScanController): Promise<void> {
+  const uri = vscode.Uri.parse(uriStr);
+  const folder = vscode.workspace.getWorkspaceFolder(uri) ?? firstWorkspaceFolder();
+  if (!folder) {
+    void vscode.window.showWarningMessage('LeakLens: open a folder to edit its .gitignore.');
+    return;
+  }
+  const pattern = basename(uri.fsPath);
+  const gitignore = vscode.Uri.joinPath(folder.uri, '.gitignore');
+
+  let text = '';
+  try {
+    text = Buffer.from(await vscode.workspace.fs.readFile(gitignore)).toString('utf8');
+  } catch {
+    // No .gitignore yet — we'll create it.
+  }
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
+  if (!lines.includes(pattern)) {
+    const prefix = text.length > 0 && !text.endsWith('\n') ? '\n' : '';
+    const updated = `${text}${prefix}${pattern}\n`;
+    await vscode.workspace.fs.writeFile(gitignore, Buffer.from(updated, 'utf8'));
+  }
+
+  controller.invalidateEnvCache();
+  try {
+    const doc = await vscode.workspace.openTextDocument(uri);
+    await controller.scanNow(doc);
+  } catch {
+    // File gone — nothing to re-scan.
+  }
+  void vscode.window.showInformationMessage(`LeakLens: added "${pattern}" to .gitignore. ✓`);
 }
 
 async function showSecretGraph(controller: ScanController, panel: PanelController): Promise<void> {

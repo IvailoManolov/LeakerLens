@@ -9,7 +9,7 @@ import { slackTokenRule } from './slack';
 import { jwtRule } from './jwt';
 import { privateKeyRule } from './private-key';
 import { highEntropyAssignmentRule } from './high-entropy';
-import { dotenvLeakRule } from './dotenv';
+import { dotenvLeakRule, dotenvFileValueRule } from './dotenv';
 
 /**
  * The bundled headline ruleset. Order matters: specific high-confidence rules come
@@ -30,5 +30,6 @@ export const DEFAULT_RULESET: Ruleset = {
     privateKeyRule,
     highEntropyAssignmentRule,
     dotenvLeakRule,
+    dotenvFileValueRule,
   ],
 };

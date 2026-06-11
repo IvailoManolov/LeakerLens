@@ -153,11 +153,15 @@ function remediationButtons(finding: PanelFinding): string {
 }
 
 function findingRow(finding: PanelFinding): string {
+  // Safe findings (gitignored .env) get a green left border and green rule-name text
+  // instead of the severity-colour pair. Everything else (hover, actions) is identical.
+  const borderCls = finding.safe ? 'border-ok' : SEVERITY_BORDER[finding.severity];
+  const textCls = finding.safe ? 'text-ok' : SEVERITY_TEXT[finding.severity];
   return `
-    <div class="group px-3 py-2 border-l-2 ${SEVERITY_BORDER[finding.severity]} hover:bg-hover">
+    <div class="group px-3 py-2 border-l-2 ${borderCls} hover:bg-hover">
       <div data-action="jumpTo" ${locAttrs(finding.loc)} class="cursor-pointer">
         <div class="flex items-center gap-2">
-          <span class="${SEVERITY_TEXT[finding.severity]} font-medium">${escapeHtml(finding.ruleName)}</span>
+          <span class="${textCls} font-medium">${escapeHtml(finding.ruleName)}</span>
           <span class="text-muted">${escapeHtml(finding.file)}:${finding.line}</span>
         </div>
         <div class="text-muted">${escapeHtml(finding.message)}</div>
@@ -183,7 +187,25 @@ function listHtml(s: PanelState): string {
         </section>`;
     })
     .join('');
-  return `<div class="divide-y divide-border">${sections}</div>`;
+
+  // Safe section: secrets that only live in gitignored .env files. They are shown in
+  // green and deliberately excluded from the red leak count — they are where they belong.
+  // Rendered FIRST so the "these are safe" confirmation is immediately visible rather than
+  // buried beneath the red/yellow problem groups.
+  let safeSection = '';
+  if (s.safeGroup && s.safeGroup.count > 0) {
+    const rows = s.safeGroup.items.map(findingRow).join('');
+    safeSection = `
+      <section>
+        <div class="flex items-center gap-2 px-3 py-1 text-muted uppercase tracking-wide text-xs">
+          <span class="text-ok">Safe — in .env (gitignored)</span>
+          <span class="px-1.5 rounded bg-badge text-badgeFg">${s.safeGroup.count}</span>
+        </div>
+        ${rows}
+      </section>`;
+  }
+
+  return `<div class="divide-y divide-border">${safeSection}${sections}</div>`;
 }
 
 // ── tree view (by secret → file → line) ───────────────────────────────────────
@@ -227,15 +249,22 @@ function fileNodeHtml(fingerprint: string, f: TreeFileNode, forceOpen: boolean):
 function secretNodeHtml(s: TreeSecretNode, forceOpen: boolean): string {
   const open = forceOpen || expanded.has(s.fingerprint);
   const children = open ? s.files.map((f) => fileNodeHtml(s.fingerprint, f, forceOpen)).join('') : '';
+
+  // Safe secrets (gitignored .env) use green styling throughout; all other behaviour is
+  // identical — they are still clickable, expandable, and jump to their real location.
+  const borderCls = s.safe ? 'border-ok' : SEVERITY_BORDER[s.severity];
+  const textCls = s.safe ? 'text-ok' : SEVERITY_TEXT[s.severity];
+  const dotEl = s.safe ? `<span class="text-ok">●</span>` : dot(s.severity);
+
   // Clicking the row jumps to the first place this secret appears; the chevron expands.
   return `
-    <div class="border-l-2 ${SEVERITY_BORDER[s.severity]}">
+    <div class="border-l-2 ${borderCls}">
       <div data-action="open" ${locAttrs(s.files[0].occurrences[0].loc)}
            data-fp="${escapeHtml(s.fingerprint)}"
            class="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-hover" title="Open first reference">
         ${chevronToggle(open, s.fingerprint)}
-        ${dot(s.severity)}
-        <span class="${SEVERITY_TEXT[s.severity]} font-medium">${escapeHtml(s.ruleName)}</span>
+        ${dotEl}
+        <span class="${textCls} font-medium">${escapeHtml(s.ruleName)}</span>
         <code class="font-mono text-muted break-all flex-1 truncate">${escapeHtml(s.preview)}</code>
         ${badge(s.totalCount, 'total references')}
         ${badge(s.fileCount, 'files')}
@@ -259,13 +288,26 @@ function filterSecrets(secrets: readonly TreeSecretNode[], q: string): TreeSecre
 
 function treeHtml(s: PanelState): string {
   const searching = query.length > 0;
+  // filterSecrets operates on s.tree.secrets which now includes safe nodes; safe nodes
+  // remain searchable by rule name, preview, and file path — no special handling needed.
   const secrets = filterSecrets(s.tree.secrets, query);
   if (secrets.length === 0) {
-    return `<div class="px-3 py-4 text-muted">No secrets match “${escapeHtml(query)}”.</div>`;
+    return `<div class=”px-3 py-4 text-muted”>No secrets match “${escapeHtml(query)}”.</div>`;
   }
-  const summary = `<div class="px-3 py-1 text-xs text-muted">${s.tree.totalSecrets} secret(s) · ${s.tree.totalRefs} reference(s)</div>`;
+
+  // Base summary: problem secrets and refs only.
+  const summaryText = `${s.tree.totalSecrets} secret(s) · ${s.tree.totalRefs} reference(s)`;
+  // Append safe counts when present, rendered in green so they're clearly distinct.
+  const safeSecrets = s.tree.safeSecrets ?? 0;
+  const safeRefs = s.tree.safeRefs ?? 0;
+  const safeSuffix =
+    safeSecrets > 0
+      ? ` · <span class=”text-ok”>+${safeSecrets} safe in .env (${safeRefs} ref(s))</span>`
+      : '';
+
+  const summary = `<div class=”px-3 py-1 text-xs text-muted”>${summaryText}${safeSuffix}</div>`;
   const nodes = secrets.map((node) => secretNodeHtml(node, searching)).join('');
-  return `${summary}<div class="divide-y divide-border">${nodes}</div>`;
+  return `${summary}<div class=”divide-y divide-border”>${nodes}</div>`;
 }
 
 // ── render ────────────────────────────────────────────────────────────────────

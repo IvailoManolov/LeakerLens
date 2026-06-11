@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ScanController } from './scanController';
-import { createGutterDecoration } from './decorations';
+import { createGutterDecoration, createEnvSafeDecoration } from './decorations';
 import { LeakHoverProvider } from './hovers';
 import { LeakCodeActionProvider } from './codeActions';
 import { PanelController } from './panel/panelController';
@@ -14,14 +14,29 @@ const FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file' };
  * wires event listeners and providers, then scans whatever is already open.
  */
 export function activate(context: vscode.ExtensionContext): void {
-  const decorationType = createGutterDecoration();
-  const controller = new ScanController(decorationType);
+  const normalDecoration = createGutterDecoration();
+  const envSafeDecoration = createEnvSafeDecoration();
+  const controller = new ScanController({ normal: normalDecoration, envSafe: envSafeDecoration });
   const license = new License(context.globalState);
   const panel = new PanelController(context.extensionUri, controller);
 
+  // Re-color open `.env` files when `.gitignore` changes (the cached gitignore answer is stale).
+  const gitignoreWatcher = vscode.workspace.createFileSystemWatcher('**/.gitignore');
+  const onGitignoreChange = (): void => {
+    controller.invalidateEnvCache();
+    for (const editor of vscode.window.visibleTextEditors) {
+      void controller.scanNow(editor.document);
+    }
+  };
+  gitignoreWatcher.onDidChange(onGitignoreChange);
+  gitignoreWatcher.onDidCreate(onGitignoreChange);
+  gitignoreWatcher.onDidDelete(onGitignoreChange);
+
   context.subscriptions.push(
     controller,
-    decorationType,
+    normalDecoration,
+    envSafeDecoration,
+    gitignoreWatcher,
     panel,
     vscode.window.registerWebviewViewProvider(PanelController.viewId, panel, {
       webviewOptions: { retainContextWhenHidden: true },
@@ -53,7 +68,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommands(context, controller, panel, license);
 
   for (const editor of vscode.window.visibleTextEditors) {
-    controller.scanNow(editor.document);
+    void controller.scanNow(editor.document);
   }
 }
 

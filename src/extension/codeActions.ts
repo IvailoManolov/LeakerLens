@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { ScanController } from './scanController';
 import type { RemediationArg } from './remediation';
+import { ENV_EXPOSED_CODE } from './diagnostics';
 
 /** Lightbulb quick-fixes for findings under the cursor/selection. */
 export class LeakCodeActionProvider implements vscode.CodeActionProvider {
@@ -8,10 +9,29 @@ export class LeakCodeActionProvider implements vscode.CodeActionProvider {
 
   constructor(private readonly controller: ScanController) {}
 
-  provideCodeActions(document: vscode.TextDocument, range: vscode.Range): vscode.CodeAction[] {
+  provideCodeActions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    context: vscode.CodeActionContext,
+  ): vscode.CodeAction[] {
     const start = document.offsetAt(range.start);
     const end = document.offsetAt(range.end);
     const actions: vscode.CodeAction[] = [];
+
+    // "Add to .gitignore" on the exposed-`.env` warning.
+    if (context.diagnostics.some((d) => d.code === ENV_EXPOSED_CODE)) {
+      const action = new vscode.CodeAction(
+        'LeakLens: Add this .env file to .gitignore',
+        vscode.CodeActionKind.QuickFix,
+      );
+      action.command = {
+        command: 'leaklens.addEnvToGitignore',
+        title: 'Add to .gitignore',
+        arguments: [document.uri.toString()],
+      };
+      action.isPreferred = true;
+      actions.push(action);
+    }
 
     for (const finding of this.controller.getFindings(document.uri)) {
       // Offer fixes when the selection/cursor touches the finding's span.

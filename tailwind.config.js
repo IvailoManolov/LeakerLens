@@ -28,6 +28,9 @@ module.exports = {
         medium: 'var(--vscode-charts-yellow, var(--vscode-editorWarning-foreground))',
         low: 'var(--vscode-charts-blue, var(--vscode-textLink-foreground))',
         ok: 'var(--vscode-charts-green, var(--vscode-testing-iconPassed))',
+        // `border-ok` uses the same token so safe findings get a matching green left border.
+        // Tailwind auto-generates border/text/bg utilities from every color entry; this
+        // comment keeps the relationship explicit for future readers.
         btn: 'var(--vscode-button-background)',
         btnFg: 'var(--vscode-button-foreground)',
         btnHover: 'var(--vscode-button-hoverBackground)',

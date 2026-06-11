@@ -35,11 +35,22 @@ export interface PanelFinding {
   readonly preview: string;
   readonly message: string;
   readonly remediations: ReadonlyArray<{ kind: RemediationKind; title: string }>;
+  /**
+   * True when this finding lives in a gitignored `.env` file — a secret that's where it
+   * belongs. The panel renders it green and excludes it from the leak count.
+   */
+  readonly safe?: boolean;
 }
 
 /** Findings grouped under one severity. */
 export interface SeverityGroup {
   readonly severity: Severity;
+  readonly count: number;
+  readonly items: readonly PanelFinding[];
+}
+
+/** The "safe" findings living in gitignored `.env` files: shown green, never counted. */
+export interface SafeGroup {
   readonly count: number;
   readonly items: readonly PanelFinding[];
 }
@@ -70,22 +81,35 @@ export interface TreeSecretNode {
   readonly totalCount: number;
   readonly fileCount: number;
   readonly files: readonly TreeFileNode[];
+  /** True for a secret that only lives in gitignored `.env` files (rendered green). */
+  readonly safe?: boolean;
 }
 
-/** The "where is each secret referenced from" tree. */
+/**
+ * The "where is each secret referenced from" tree. `secrets` carries both problem and safe
+ * nodes (safe ones flagged via {@link TreeSecretNode.safe} and sorted last); the `total*`
+ * counts cover problems only, with safe ones tallied separately in `safe*`.
+ */
 export interface TreeState {
   readonly secrets: readonly TreeSecretNode[];
   readonly totalSecrets: number;
   readonly totalRefs: number;
+  /** Count of distinct safe (gitignored `.env`) secrets, excluded from `totalSecrets`. */
+  readonly safeSecrets?: number;
+  /** Count of safe references, excluded from `totalRefs`. */
+  readonly safeRefs?: number;
 }
 
 /** The full state the panel renders. */
 export interface PanelState {
   readonly groups: readonly SeverityGroup[];
   readonly tree: TreeState;
+  /** Number of *counted* leaks (ordinary files + exposed `.env`). Excludes safe findings. */
   readonly totalCount: number;
   readonly isEmpty: boolean;
   readonly scanning: boolean;
+  /** Secrets living safely in gitignored `.env` files — shown green, not part of `totalCount`. */
+  readonly safeGroup?: SafeGroup;
 }
 
 /** Host → panel messages. */

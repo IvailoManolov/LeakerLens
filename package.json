@@ -2,7 +2,7 @@
   "name": "leaklens",
   "displayName": "LeakLens",
   "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "publisher": "leaklens",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -112,7 +112,7 @@
     "watch": "node esbuild.mjs --watch",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "pretest:integration": "tsc -p ./tsconfig.test.json",
+    "pretest:integration": "tsc -p ./tsconfig.test.json && node -e \"const fs=require('fs');fs.cpSync('test/integration/vscode-shim.js','out-test/test/integration/vscode-shim.js');fs.cpSync('test/integration/vscode-shim.cmd','out-test/test/integration/vscode-shim.cmd')\"",
     "test:integration": "node ./out-test/test/integration/runTest.js",
     "package": "npm run build && vsce package --no-dependencies",
     "vscode:prepublish": "npm run build"
@@ -122,7 +122,7 @@
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.75.0",
     "@vitest/coverage-v8": "^1.6.0",
-    "@vscode/test-electron": "^2.3.9",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^2.24.0",
     "esbuild": "^0.20.2",
     "glob": "^10.3.10",

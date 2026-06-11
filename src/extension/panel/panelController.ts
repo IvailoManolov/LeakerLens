@@ -11,14 +11,107 @@ import type {
   PanelToHost,
   PanelView,
   RemediationKind,
+  SafeGroup,
   SeverityGroup,
   TreeFileNode,
   TreeOccurrence,
   TreeSecretNode,
   TreeState,
 } from './protocol';
+import type { Finding } from '../../engine';
 
 const SEVERITY_ORDER: readonly Severity[] = ['critical', 'high', 'medium', 'low'];
+
+/** Flatten a {@link Finding} into a {@link PanelFinding}, optionally flagged `safe`. */
+function toPanelFinding(uriStr: string, file: string, f: Finding, safe = false): PanelFinding {
+  return {
+    loc: { uri: uriStr, start: f.start, end: f.end },
+    ruleName: f.ruleName,
+    severity: f.severity,
+    file,
+    line: f.line + 1,
+    preview: f.matchPreview,
+    message: f.message,
+    remediations: f.remediations.map((r) => ({ kind: r.kind, title: r.title })),
+    ...(safe ? { safe: true } : {}),
+  };
+}
+
+/**
+ * Group findings by engine fingerprint (same raw value → same node), then by file, into
+ * sorted {@link TreeSecretNode}s. `safe` tags every node and shifts the sort. Single O(F) pass.
+ */
+function buildSecretNodes(
+  byUri: ReadonlyMap<string, Finding[]>,
+  safe: boolean,
+): { secrets: TreeSecretNode[]; totalRefs: number } {
+  interface Group {
+    ruleName: string;
+    severity: Severity;
+    preview: string;
+    total: number;
+    files: Map<string, TreeOccurrence[]>;
+  }
+  const byFingerprint = new Map<string, Group>();
+  let totalRefs = 0;
+
+  for (const [uriStr, findings] of byUri) {
+    if (findings.length === 0) {
+      continue;
+    }
+    const file = vscode.workspace.asRelativePath(vscode.Uri.parse(uriStr));
+    for (const f of findings) {
+      totalRefs += 1;
+      let group = byFingerprint.get(f.fingerprint);
+      if (!group) {
+        group = {
+          ruleName: f.ruleName,
+          severity: f.severity,
+          preview: f.matchPreview,
+          total: 0,
+          files: new Map(),
+        };
+        byFingerprint.set(f.fingerprint, group);
+      }
+      group.total += 1;
+      const occurrence: TreeOccurrence = {
+        loc: { uri: uriStr, start: f.start, end: f.end },
+        line: f.line + 1,
+        column: f.column + 1,
+      };
+      const bucket = group.files.get(file) ?? [];
+      bucket.push(occurrence);
+      group.files.set(file, bucket);
+    }
+  }
+
+  const secrets: TreeSecretNode[] = [];
+  for (const [fingerprint, group] of byFingerprint) {
+    const files: TreeFileNode[] = [...group.files.entries()]
+      .map(([file, occurrences]) => ({ file, count: occurrences.length, occurrences }))
+      .sort((a, b) => b.count - a.count || a.file.localeCompare(b.file));
+    secrets.push({
+      fingerprint,
+      ruleName: group.ruleName,
+      severity: group.severity,
+      preview: group.preview,
+      totalCount: group.total,
+      fileCount: files.length,
+      files,
+      ...(safe ? { safe: true } : {}),
+    });
+  }
+  // Problem nodes sort by severity first; safe nodes share one group and sort by count/name.
+  secrets.sort(
+    safe
+      ? (a, b) => b.totalCount - a.totalCount || a.ruleName.localeCompare(b.ruleName)
+      : (a, b) =>
+          SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) ||
+          b.totalCount - a.totalCount ||
+          a.ruleName.localeCompare(b.ruleName),
+  );
+  return { secrets, totalRefs };
+}
 
 /**
  * Host side of the findings panel. Implements the webview message protocol: pushes
@@ -82,23 +175,14 @@ export class PanelController implements vscode.WebviewViewProvider, vscode.Dispo
   private buildState(): PanelState {
     const grouped = new Map<Severity, PanelFinding[]>();
     let total = 0;
-    for (const [uriStr, findings] of this.controller.allFindings()) {
+    for (const [uriStr, findings] of this.controller.allCountableFindings()) {
       if (findings.length === 0) {
         continue;
       }
       const file = vscode.workspace.asRelativePath(vscode.Uri.parse(uriStr));
       for (const f of findings) {
         total += 1;
-        const item: PanelFinding = {
-          loc: { uri: uriStr, start: f.start, end: f.end },
-          ruleName: f.ruleName,
-          severity: f.severity,
-          file,
-          line: f.line + 1,
-          preview: f.matchPreview,
-          message: f.message,
-          remediations: f.remediations.map((r) => ({ kind: r.kind, title: r.title })),
-        };
+        const item = toPanelFinding(uriStr, file, f);
         const bucket = grouped.get(f.severity) ?? [];
         bucket.push(item);
         grouped.set(f.severity, bucket);
@@ -108,83 +192,50 @@ export class PanelController implements vscode.WebviewViewProvider, vscode.Dispo
       const items = grouped.get(severity) ?? [];
       return { severity, count: items.length, items };
     });
-    return {
-      groups,
-      tree: this.buildTree(),
-      totalCount: total,
-      isEmpty: total === 0,
-      scanning: this.scanning,
-    };
-  }
 
-  /**
-   * Group every finding by its engine fingerprint (same raw value → same node), then by
-   * file, into the "where is this secret referenced from" tree. Single O(F) pass; the raw
-   * secret never leaves the host — only the masked preview and fingerprint travel out.
-   */
-  private buildTree(): TreeState {
-    interface Group {
-      ruleName: string;
-      severity: Severity;
-      preview: string;
-      total: number;
-      files: Map<string, TreeOccurrence[]>;
-    }
-    const byFingerprint = new Map<string, Group>();
-    let totalRefs = 0;
-
-    for (const [uriStr, findings] of this.controller.allFindings()) {
+    // Safe set: secrets in gitignored `.env` files — rendered green, never part of the count.
+    const safeItems: PanelFinding[] = [];
+    for (const [uriStr, findings] of this.controller.allSafeFindings()) {
       if (findings.length === 0) {
         continue;
       }
       const file = vscode.workspace.asRelativePath(vscode.Uri.parse(uriStr));
       for (const f of findings) {
-        totalRefs += 1;
-        let group = byFingerprint.get(f.fingerprint);
-        if (!group) {
-          group = {
-            ruleName: f.ruleName,
-            severity: f.severity,
-            preview: f.matchPreview,
-            total: 0,
-            files: new Map(),
-          };
-          byFingerprint.set(f.fingerprint, group);
-        }
-        group.total += 1;
-        const occurrence: TreeOccurrence = {
-          loc: { uri: uriStr, start: f.start, end: f.end },
-          line: f.line + 1,
-          column: f.column + 1,
-        };
-        const bucket = group.files.get(file) ?? [];
-        bucket.push(occurrence);
-        group.files.set(file, bucket);
+        safeItems.push(toPanelFinding(uriStr, file, f, true));
       }
     }
+    const safeCount = safeItems.length;
+    const safeGroup: SafeGroup | undefined =
+      safeCount > 0 ? { count: safeCount, items: safeItems } : undefined;
 
-    const secrets: TreeSecretNode[] = [];
-    for (const [fingerprint, group] of byFingerprint) {
-      const files: TreeFileNode[] = [...group.files.entries()]
-        .map(([file, occurrences]) => ({ file, count: occurrences.length, occurrences }))
-        .sort((a, b) => b.count - a.count || a.file.localeCompare(b.file));
-      secrets.push({
-        fingerprint,
-        ruleName: group.ruleName,
-        severity: group.severity,
-        preview: group.preview,
-        totalCount: group.total,
-        fileCount: files.length,
-        files,
-      });
-    }
-    secrets.sort(
-      (a, b) =>
-        SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) ||
-        b.totalCount - a.totalCount ||
-        a.ruleName.localeCompare(b.ruleName),
-    );
-    return { secrets, totalSecrets: secrets.length, totalRefs };
+    return {
+      groups,
+      tree: this.buildTree(),
+      totalCount: total,
+      isEmpty: total === 0 && safeCount === 0,
+      scanning: this.scanning,
+      ...(safeGroup ? { safeGroup } : {}),
+    };
+  }
+
+  /**
+   * Build the "where is each secret referenced from" tree. Both the countable (problem) set
+   * and the safe (gitignored `.env`) set are folded in: problem nodes come first, then safe
+   * nodes flagged via {@link TreeSecretNode.safe}. The `total*` counts cover problems only;
+   * safe ones are tallied separately in `safe*`. The raw secret never leaves the host — only
+   * the masked preview and fingerprint travel out.
+   */
+  private buildTree(): TreeState {
+    const problem = buildSecretNodes(this.controller.allCountableFindings(), false);
+    const safe = buildSecretNodes(this.controller.allSafeFindings(), true);
+    return {
+      secrets: [...problem.secrets, ...safe.secrets],
+      totalSecrets: problem.secrets.length,
+      totalRefs: problem.totalRefs,
+      ...(safe.secrets.length > 0
+        ? { safeSecrets: safe.secrets.length, safeRefs: safe.totalRefs }
+        : {}),
+    };
   }
 
   private async onMessage(message: PanelToHost): Promise<void> {
