@@ -2,6 +2,21 @@
 
 All notable changes to LeakLens are documented here.
 
+## [2.1.0] — 2026-06-11
+
+### Fixed
+
+- **Green (safe) secrets no longer offer remediations.** A secret living in a gitignored
+  `.env` file is already where it belongs, so "Ignore here", "Mask value", and "Move to
+  `.env`" made no sense for it. Those actions are now suppressed for safe findings across
+  every surface — the Findings panel (List), the editor lightbulb (quick-fixes), and the
+  hover links. Red (counted) leaks are unaffected.
+- **Safe secrets now render green in the Map.** Tree-mode map nodes use a different id scheme
+  (`tsecret:<fp>@<file>`) than force mode (`secret:<fp>`), so the safe set never matched and
+  the node fell back to its red severity colour. The safe set is now keyed on the secret's
+  fingerprint, so a gitignored-`.env` secret shows green (with its "Safe (.env gitignored)"
+  tooltip badge) in both Tree and Force layouts — consistent with the List and Tree views.
+
 ## [1.2.0] — 2026-06-08
 
 ### Added

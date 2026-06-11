@@ -62,6 +62,15 @@ export class ScanController implements vscode.Disposable {
     return this.results.get(uri.toString())?.findings ?? [];
   }
 
+  /**
+   * True when `uri` is a gitignored `.env` file whose secrets are safe (rendered green). Such
+   * findings have no applicable remediations — there is nothing to mask, move, or ignore — so
+   * the editor hover and quick-fixes suppress their action links, matching the panel.
+   */
+  isSafe(uri: vscode.Uri): boolean {
+    return this.results.get(uri.toString())?.env === 'safe';
+  }
+
   /** Every URI's findings — including `.env` files (used for decorations/hovers). */
   allFindings(): ReadonlyMap<string, Finding[]> {
     const out = new Map<string, Finding[]>();

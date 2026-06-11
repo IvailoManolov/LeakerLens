@@ -32,7 +32,9 @@ function toPanelFinding(uriStr: string, file: string, f: Finding, safe = false):
     line: f.line + 1,
     preview: f.matchPreview,
     message: f.message,
-    remediations: f.remediations.map((r) => ({ kind: r.kind, title: r.title })),
+    // Safe findings (gitignored `.env`) live exactly where they belong — there is nothing to
+    // mask, move, or ignore — so they carry no remediations and the panel shows no action links.
+    remediations: safe ? [] : f.remediations.map((r) => ({ kind: r.kind, title: r.title })),
     ...(safe ? { safe: true } : {}),
   };
 }

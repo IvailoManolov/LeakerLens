@@ -33,7 +33,10 @@ export class LeakCodeActionProvider implements vscode.CodeActionProvider {
       actions.push(action);
     }
 
-    for (const finding of this.controller.getFindings(document.uri)) {
+    // Secrets inside a gitignored `.env` file are safe (green) — there is nothing to mask,
+    // move, or ignore, so we offer no per-finding quick-fixes for them.
+    const safe = this.controller.isSafe(document.uri);
+    for (const finding of safe ? [] : this.controller.getFindings(document.uri)) {
       // Offer fixes when the selection/cursor touches the finding's span.
       if (start > finding.end || end < finding.start) {
         continue;

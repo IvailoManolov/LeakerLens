@@ -153,10 +153,18 @@ function remediationButtons(finding: PanelFinding): string {
 }
 
 function findingRow(finding: PanelFinding): string {
-  // Safe findings (gitignored .env) get a green left border and green rule-name text
-  // instead of the severity-colour pair. Everything else (hover, actions) is identical.
+  // Safe findings (gitignored .env) get a green left border and green rule-name text instead
+  // of the severity-colour pair. They also carry no remediations (the host sends none — a
+  // secret that's where it belongs has nothing to mask, move, or ignore), so the action row
+  // is omitted entirely rather than rendered empty.
   const borderCls = finding.safe ? 'border-ok' : SEVERITY_BORDER[finding.severity];
   const textCls = finding.safe ? 'text-ok' : SEVERITY_TEXT[finding.severity];
+  const actions =
+    finding.remediations.length > 0
+      ? `<div class="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        ${remediationButtons(finding)}
+      </div>`
+      : '';
   return `
     <div class="group px-3 py-2 border-l-2 ${borderCls} hover:bg-hover">
       <div data-action="jumpTo" ${locAttrs(finding.loc)} class="cursor-pointer">
@@ -167,9 +175,7 @@ function findingRow(finding: PanelFinding): string {
         <div class="text-muted">${escapeHtml(finding.message)}</div>
         <code class="font-mono text-muted break-all">${escapeHtml(finding.preview)}</code>
       </div>
-      <div class="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        ${remediationButtons(finding)}
-      </div>
+      ${actions}
     </div>`;
 }
 

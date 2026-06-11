@@ -83,6 +83,18 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * Extract a secret's fingerprint from its graph node id. The two layouts encode the *same*
+ * secret with different ids — force mode `secret:<fp>`, tree mode `tsecret:<fp>@<file>` (see
+ * buildGraphModel / buildTreeModel) — so we strip the kind prefix and any `@<file>` suffix.
+ * Fingerprints are cyrb53 hex (no ':' or '@'), making this split unambiguous.
+ */
+function secretFingerprintOf(id: string): string {
+  const afterPrefix = id.slice(id.indexOf(':') + 1);
+  const at = afterPrefix.indexOf('@');
+  return at === -1 ? afterPrefix : afterPrefix.slice(0, at);
+}
+
 /** First non-empty resolved value among `names`, else `fallback`. */
 function cssVar(names: readonly string[], fallback: string): string {
   const cs = getComputedStyle(document.body);
@@ -118,11 +130,13 @@ class SecretMap implements SecretMapController {
   private simEdges: SimEdge[] = [];
   private signature = '';
   /**
-   * IDs of secret graph nodes that are "safe" (live exclusively in gitignored .env files).
-   * Maintained in parallel with `model.nodes` — we cannot add `safe` to the engine's
-   * `GraphNode` type, so we track it here in the webview shell instead.
+   * Fingerprints of secrets that are "safe" (live exclusively in gitignored .env files). We
+   * key on the fingerprint — not the graph node id — because the two layouts encode the same
+   * secret with different ids (force `secret:<fp>` vs tree `tsecret:<fp>@<file>`), and both
+   * must render green. We cannot add `safe` to the engine's `GraphNode` type, so we track it
+   * here in the webview shell instead.
    */
-  private safeNodeIds = new Set<string>();
+  private safeFingerprints = new Set<string>();
   private policy: RenderPolicy = { animate: true, renderLimit: 0, disclosed: false };
 
   // Tree layout (the default view): a static, tidy file→secret tree.
@@ -232,7 +246,7 @@ class SecretMap implements SecretMapController {
     this.sim = [];
     this.simEdges = [];
     this.signature = '';
-    this.safeNodeIds = new Set();
+    this.safeFingerprints = new Set();
     this.treeModel = { nodes: [], edges: [] };
     this.treePos = [];
     this.treeRenderLimit = 0;
@@ -448,11 +462,10 @@ class SecretMap implements SecretMapController {
     this.signature = signature;
     this.policy = policy;
 
-    // Rebuild the safe-node index from the fingerprints we collected above. A secret node's
-    // graph ID is always `secret:<fingerprint>` (see buildGraphModel in secretMapModel.ts).
-    this.safeNodeIds = new Set(
-      [...safeFingerprints].map((fp) => `secret:${fp}`),
-    );
+    // Adopt the safe fingerprints collected above. drawNode/tooltipHtml resolve each node's
+    // fingerprint from its id (force or tree scheme) and test membership here, so a safe
+    // secret renders green in *both* layouts.
+    this.safeFingerprints = safeFingerprints;
 
     this.hovered = -1;
     this.dragging = -1;
@@ -630,6 +643,11 @@ class SecretMap implements SecretMapController {
     ctx.restore();
   }
 
+  /** True when `node` is a secret living only in gitignored .env files (rendered green). */
+  private isSafeSecret(node: GraphNode): boolean {
+    return node.kind === 'secret' && this.safeFingerprints.has(secretFingerprintOf(node.id));
+  }
+
   /** Fill/stroke a node circle (filled for secrets by severity, hollow for files). */
   private drawNode(
     ctx: CanvasRenderingContext2D,
@@ -647,7 +665,7 @@ class SecretMap implements SecretMapController {
     } else {
       // Safe secret nodes (gitignored .env) render in calm green instead of the severity
       // color so they visually match the green section in the List and Tree views.
-      const color = this.safeNodeIds.has(node.id) ? p.safe : p.severity[node.severity];
+      const color = this.isSafeSecret(node) ? p.safe : p.severity[node.severity];
       if (glow) {
         ctx.shadowColor = color;
         ctx.shadowBlur = 10;
@@ -1010,7 +1028,7 @@ class SecretMap implements SecretMapController {
     if (node.kind === 'secret') {
       // Safe nodes get an extra "Safe (.env)" badge so the tooltip is coherent with the
       // green fill — it's clear this isn't a red leak, just a well-placed secret.
-      const safeBadge = this.safeNodeIds.has(node.id)
+      const safeBadge = this.isSafeSecret(node)
         ? `<div class="text-ok">Safe (.env gitignored)</div>`
         : '';
       return (
