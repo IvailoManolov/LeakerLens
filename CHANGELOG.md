@@ -2,6 +2,31 @@
 
 All notable changes to LeakLens are documented here.
 
+## [3.1.0] — 2026-06-14
+
+### Added
+
+- **34 new secret detectors (12 → 46 rules).** Broad provider coverage: cloud (Azure,
+  DigitalOcean, Cloudflare, Heroku, Linode), source/CI (GitLab, npm, PyPI, Docker Hub, Terraform
+  Cloud, Atlassian, GitHub fine-grained), AI (Hugging Face, Replicate, Groq), payments (Square,
+  Shopify, PayPal/Braintree), comms (SendGrid, Mailgun, Mailchimp, Slack/Discord webhooks,
+  Telegram), observability (Sentry, New Relic, Datadog, Grafana, PagerDuty), and database
+  connection-string passwords (Postgres, MySQL, MongoDB, Redis, PlanetScale). Patterns adapted
+  from gitleaks (MIT); credited in `src/engine/rules/catalog/CREDITS.md`.
+- New rules use a declarative catalog + a shared `defineRule()` factory, so the ruleset grows
+  without eroding the 100% engine-coverage gate or the scan-latency budget.
+
+### Changed
+
+- Marketplace readiness: a colour 256×256 PNG icon, a refined proprietary EULA, a corrected
+  repository URL, and an updated README (full detector list + a CLI section).
+
+### Quality
+
+- Conservative, precision-first: every new rule is keyword-gated, and loose detectors are gated by
+  entropy + placeholder + example-path filters (no `Bearer`/raw-blob catch-alls). Suite at
+  **523 tests**, engine still **100%** covered, scan well under the 50 ms budget.
+
 ## [3.0.0] — 2026-06-14
 
 ### Added — Agent-friendly surfaces

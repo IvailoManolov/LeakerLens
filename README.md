@@ -29,9 +29,22 @@ machine. No account, no cloud, no telemetry of your code.
 
 ## Detected secret types
 
-AWS Access Keys, Google/GCP API keys, GitHub tokens, Stripe keys, OpenAI keys, Anthropic
-keys, Slack tokens, JWTs, PEM private keys, generic high-entropy secrets, and hardcoded
-`.env`-style values. See [`Documentation/1.0.0/RULES.md`](Documentation/1.0.0/RULES.md).
+**46 detectors and counting**, all running locally:
+
+- **Cloud & infra** — AWS, Google/GCP, Azure Storage, DigitalOcean, Cloudflare, Heroku, Linode.
+- **Source & CI** — GitHub (classic + fine-grained), GitLab, npm, PyPI, Docker Hub, Terraform
+  Cloud, Atlassian.
+- **AI** — OpenAI, Anthropic, Hugging Face, Replicate, Groq.
+- **Payments** — Stripe, Square, Shopify, PayPal / Braintree.
+- **Comms & email** — Slack (tokens + webhooks), SendGrid, Mailgun, Mailchimp, Discord webhooks,
+  Telegram bots.
+- **Observability** — Sentry DSNs, New Relic, Datadog, Grafana, PagerDuty.
+- **Datastores** — Postgres / MySQL / MongoDB / Redis connection-string passwords, PlanetScale.
+- **Generic** — JWTs, PEM private keys, high-entropy assignments, and hardcoded `.env`-style values.
+
+Detection patterns are partly adapted from [gitleaks](https://github.com/gitleaks/gitleaks) (MIT).
+Precision-first: placeholders, example/test files, and low-entropy matches are filtered out so the
+signal stays high.
 
 ## Commands
 
@@ -40,6 +53,7 @@ keys, Slack tokens, JWTs, PEM private keys, generic high-entropy secrets, and ha
 | `LeakLens: Scan Workspace for Secrets` | Sweep the whole workspace |
 | `LeakLens: Show Findings Panel` | Reveal the panel |
 | `LeakLens: Show Secret Graph` | Open the animated map of where each secret is referenced |
+| `LeakLens: Set up agent guardrails` | Wire the scanner into your AI agents (MCP + `AGENTS.md` + git hook) |
 | `LeakLens: Install Pre-commit Guard` | Add the opt-in git hook to this repo |
 | `LeakLens: Remove Pre-commit Guard` | Remove it |
 | `LeakLens: Activate Pro License` | Enter an offline Pro key |
@@ -60,6 +74,20 @@ license verification — and that degrades gracefully when offline.
 
 Add `leaklens:ignore` anywhere on a line (e.g. `// leaklens:ignore`) to suppress findings
 on that line. The **Ignore here** quick-fix does this for you.
+
+## Command-line scanner
+
+LeakLens ships a headless CLI, so the same engine runs in your terminal and in CI:
+
+```sh
+leaklens scan src            # human-readable
+leaklens scan src --json     # machine-readable JSON
+leaklens scan src --sarif    # SARIF 2.1.0 (GitHub code scanning, CI)
+```
+
+The exit code is `0` when clean and `1` when secrets are found, so it cleanly gates a CI step or
+a pre-push check. It respects `.gitignore` and the same exclusions as the editor, and prints only
+masked previews — never the raw secret.
 
 ## MCP server (for AI coding agents)
 
@@ -92,3 +120,16 @@ Each tool returns a short human summary **and** a structured `{ findings, summar
 byte-for-byte consistent with `leaklens scan --json`. **Privacy:** results carry only a
 **masked preview** and a non-reversible **fingerprint** of each match — the raw secret is
 never returned, not even for `scan_text` where the agent supplied the text.
+
+### One-step setup
+
+Run **`LeakLens: Set up agent guardrails`** from the command palette and LeakLens wires itself
+into your agents for you: it registers the MCP server (Claude Code, Cursor, VS Code), drops a
+short instruction block into `AGENTS.md`, and offers to install the pre-commit guard — no manual
+config editing.
+
+## License
+
+LeakLens is proprietary — free to install and use, no redistribution. See [LICENSE](LICENSE).
+Detection patterns adapted from gitleaks (MIT) are credited in
+[`src/engine/rules/catalog/CREDITS.md`](src/engine/rules/catalog/CREDITS.md).

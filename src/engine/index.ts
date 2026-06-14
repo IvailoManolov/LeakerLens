@@ -8,6 +8,19 @@ export { fingerprint } from './fingerprint';
 export { maskAll, maskMiddle, maskPrefix } from './mask';
 export { isExamplePath, looksLikePlaceholder, isEnvFile } from './allowlist';
 export { DEFAULT_RULESET } from './rules';
+export { defineRule } from './rules/define';
+export type { RuleSpec, MaskSpec } from './rules/define';
+export {
+  sourceCiSpecs,
+  commsSpecs,
+  cloudSpecs,
+  aiSpecs,
+  paymentsSpecs,
+  observabilitySpecs,
+  datastoreProviderSpecs,
+  connectionStringSpecs,
+  catalogProviderSpecs,
+} from './rules/catalog';
 export type {
   Finding,
   Remediation,
