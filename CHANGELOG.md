@@ -2,6 +2,34 @@
 
 All notable changes to LeakLens are documented here.
 
+## [3.0.0] — 2026-06-14
+
+### Added — Agent-friendly surfaces
+
+LeakLens is now usable by AI coding agents and CI, not just the editor GUI. The pure
+detection engine is exposed through three headless surfaces — everything stays local, and
+each surface only ever emits a masked preview + fingerprint, never the raw secret.
+
+- **`leaklens` CLI** — `leaklens scan [globs…]` (and `--stdin`) with human, **`--json`**, and
+  **`--sarif`** output plus gate-able exit codes (`0` clean / `1` findings / `2` usage) for CI
+  and agent loops. `.gitignore`-aware, honors the `.env` policy, and emits findings in a
+  deterministic order so runs and diffs are stable.
+- **MCP server** — `leaklens mcp` starts a stdio server exposing `scan_text`, `scan_file`, and
+  `scan_workspace`, so an agent can scan code *before* it writes it or audit the workspace on
+  demand. The SDK is bundled into its own `dist/mcp.js`, off the hot scan path.
+- **`LeakLens: Set up agent guardrails`** command — one step wires the MCP server into your
+  agents (Claude Code `.mcp.json`, VS Code `.vscode/mcp.json`, Cursor `.cursor/mcp.json`),
+  merges an instruction block into `AGENTS.md`, and offers to install the pre-commit guard.
+  Config merges are idempotent, and the runners are copied into the extension's global storage
+  so the wiring survives extension updates.
+
+### Internal
+
+- A shared, dependency-free `engine/scope.ts` is now the single source of truth for scan
+  exclusions, used by both the editor and the CLI. New runtime dependencies (`ignore`,
+  `@modelcontextprotocol/sdk`, `zod`) are esbuild-bundled per surface. Test suite grew to
+  **423 tests**; the engine stays at **100%** coverage.
+
 ## [2.1.0] — 2026-06-11
 
 ### Fixed
