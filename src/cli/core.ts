@@ -10,7 +10,7 @@
  * a real temp-directory fixture, not mocks.
  */
 import { readFileSync, readdirSync, statSync, type Stats } from 'fs';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'path';
+import { dirname, isAbsolute, join, relative, resolve } from 'path';
 import ignore, { type Ignore } from 'ignore';
 import { scanText, isEnvFile, type Finding, type Severity } from '../engine';
 import { EXCLUDED_DIRS } from '../engine/scope';
@@ -167,7 +167,9 @@ export function buildIgnore(root: string): Ignore {
 
 /** Normalize an absolute path to a `/`-separated path relative to `root`. */
 export function toRelPosix(root: string, absPath: string): string {
-  return relative(root, absPath).split(sep).join('/');
+  // Split on BOTH separators so output is posix on every OS. On Linux `path.sep` is `/`,
+  // so splitting on `sep` alone would leave Windows-style `\` in the path.
+  return relative(root, absPath).split(/[\\/]/).join('/');
 }
 
 /**
@@ -322,7 +324,7 @@ export function scanFiles(cwd: string, paths: readonly string[]): LocatedFinding
 
 /** Scan stdin content as `filename` and return located findings. */
 export function scanStdinContent(content: string, filename: string): LocatedFinding[] {
-  const relPosix = filename.split(sep).join('/');
+  const relPosix = filename.split(/[\\/]/).join('/');
   return scanText(content, { filename }).map((finding) => ({ file: relPosix, finding }));
 }
 

@@ -19,7 +19,7 @@
  * `dist/cli.js`, which only `require`s this file lazily for the `mcp` subcommand.
  */
 import { readFileSync } from 'fs';
-import { resolve, sep } from 'path';
+import { resolve } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -144,7 +144,7 @@ export function handleScanFile(input: { path: string }, cwd: string): ToolResult
   } catch (e) {
     throw new Error(`cannot read file '${input.path}': ${(e as Error).message}`);
   }
-  const relPosix = abs.split(sep).join('/');
+  const relPosix = abs.split(/[\\/]/).join('/');
   const located = scanText(text, { filename: abs }).map((finding) => ({
     file: relPosix,
     finding,
