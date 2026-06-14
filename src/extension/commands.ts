@@ -7,6 +7,16 @@ import { applyRemediation, type RemediationArg } from './remediation';
 import { installPreCommitHook, uninstallPreCommitHook } from './git/preCommit';
 import { SCAN_EXCLUDE, SCAN_LIMIT } from './scanScope';
 import type { License } from '../license/license';
+import { ensureAgentRunners } from './agentRunners';
+import {
+  AGENT_TARGETS,
+  buildInstructionBlock,
+  buildServerEntry,
+  mergeInstructionBlock,
+  mergeMcpConfig,
+  wrapBlock,
+  type AgentTarget,
+} from './agentSetup';
 
 /** Register every contributed command. */
 export function registerCommands(
@@ -32,6 +42,9 @@ export function registerCommands(
     ),
     vscode.commands.registerCommand('leaklens.uninstallGitHook', () => uninstallGitHook()),
     vscode.commands.registerCommand('leaklens.activateLicense', () => activateLicense(license)),
+    vscode.commands.registerCommand('leaklens.setupAgentGuardrails', () =>
+      setupAgentGuardrails(context),
+    ),
   );
 }
 
@@ -145,6 +158,133 @@ async function installGitHook(extensionUri: vscode.Uri, license: License): Promi
         : 'LeakLens pre-commit guard installed (warn-only).',
     );
   }
+}
+
+/**
+ * `LeakLens: Set up agent guardrails`. Wires the bundled MCP server + CLI into the current
+ * workspace's AI-agent tooling with zero manual config editing: merges a `leaklens` MCP server
+ * into the selected agents' config files and writes a concise instruction block into
+ * `AGENTS.md` (and `CLAUDE.md` if present + Claude selected). Idempotent — re-running yields
+ * identical files. This command itself is free; commit-blocking gating stays in the hook path.
+ */
+async function setupAgentGuardrails(context: vscode.ExtensionContext): Promise<void> {
+  const folder = firstWorkspaceFolder();
+  if (!folder) {
+    void vscode.window.showErrorMessage('LeakLens: open a folder to set up agent guardrails.');
+    return;
+  }
+
+  // Provision the stable, version-independent runner copies (refresh defensively at command
+  // time in case activation predates an update or globalStorage was cleared).
+  const { mcpPath, cliPath } = await ensureAgentRunners(context);
+
+  const picks = await vscode.window.showQuickPick(
+    AGENT_TARGETS.map((t) => ({ label: t.label, detail: t.detail, picked: true, target: t })),
+    {
+      canPickMany: true,
+      title: 'LeakLens: configure which AI agents?',
+      placeHolder: 'All are pre-selected — confirm to write their MCP configs.',
+    },
+  );
+  if (picks === undefined) {
+    return; // User cancelled.
+  }
+  const selected = picks.map((p) => p.target);
+
+  const changed: string[] = [];
+
+  // 1. Merge the leaklens MCP server into each selected agent's config.
+  for (const target of selected) {
+    await mergeMcpConfigFile(folder.uri, target, mcpPath);
+    changed.push(target.configPath);
+  }
+
+  // 2. ALWAYS merge the instruction block into AGENTS.md (the cross-tool standard).
+  const block = wrapBlock(buildInstructionBlock(cliPath));
+  await mergeMarkdownBlock(vscode.Uri.joinPath(folder.uri, 'AGENTS.md'), block, true);
+  changed.push('AGENTS.md');
+
+  // …and into a root CLAUDE.md if it exists AND Claude Code was selected.
+  if (selected.some((t) => t.id === 'claude')) {
+    const claudeMd = vscode.Uri.joinPath(folder.uri, 'CLAUDE.md');
+    if (await fileExists(claudeMd)) {
+      await mergeMarkdownBlock(claudeMd, block, false);
+      changed.push('CLAUDE.md');
+    }
+  }
+
+  await showSetupSummary(changed, folder.uri);
+}
+
+/** Read a config file (if any), merge the leaklens server, and write it back pretty-printed. */
+async function mergeMcpConfigFile(
+  folderUri: vscode.Uri,
+  target: AgentTarget,
+  mcpPath: string,
+): Promise<void> {
+  const fileUri = vscode.Uri.joinPath(folderUri, ...target.configPath.split('/'));
+  const existing = await readTextOrUndefined(fileUri);
+  const entry = buildServerEntry(mcpPath, target.stdioType);
+  const merged = mergeMcpConfig(existing, target.topLevelKey, entry);
+  await ensureParentDir(fileUri);
+  await vscode.workspace.fs.writeFile(fileUri, Buffer.from(merged, 'utf8'));
+}
+
+/**
+ * Marker-merge the instruction block into a Markdown file. When `createIfMissing` is false and
+ * the file is absent, this is a no-op (used for CLAUDE.md, which is only updated if it exists).
+ */
+async function mergeMarkdownBlock(
+  fileUri: vscode.Uri,
+  block: string,
+  createIfMissing: boolean,
+): Promise<void> {
+  const existing = await readTextOrUndefined(fileUri);
+  if (existing === undefined && !createIfMissing) {
+    return;
+  }
+  const merged = mergeInstructionBlock(existing, block);
+  await ensureParentDir(fileUri);
+  await vscode.workspace.fs.writeFile(fileUri, Buffer.from(merged, 'utf8'));
+}
+
+/** Info toast summarizing the write, with quick follow-up actions. */
+async function showSetupSummary(changed: readonly string[], folderUri: vscode.Uri): Promise<void> {
+  const choice = await vscode.window.showInformationMessage(
+    `LeakLens agent guardrails set up — updated ${changed.join(', ')}. ✓`,
+    'Open AGENTS.md',
+    'Install commit guard',
+  );
+  if (choice === 'Open AGENTS.md') {
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folderUri, 'AGENTS.md'));
+    await vscode.window.showTextDocument(doc);
+  } else if (choice === 'Install commit guard') {
+    await vscode.commands.executeCommand('leaklens.installGitHook');
+  }
+}
+
+/** Read a file as UTF-8, or `undefined` if it does not exist. */
+async function readTextOrUndefined(uri: vscode.Uri): Promise<string | undefined> {
+  try {
+    return Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+  } catch {
+    return undefined;
+  }
+}
+
+/** True if the file exists and is readable. */
+async function fileExists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Create the parent directory of `uri` (no-op if it already exists). */
+async function ensureParentDir(uri: vscode.Uri): Promise<void> {
+  await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
 }
 
 async function uninstallGitHook(): Promise<void> {

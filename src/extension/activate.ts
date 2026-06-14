@@ -5,6 +5,7 @@ import { LeakHoverProvider } from './hovers';
 import { LeakCodeActionProvider } from './codeActions';
 import { PanelController } from './panel/panelController';
 import { registerCommands } from './commands';
+import { ensureAgentRunners } from './agentRunners';
 import { License } from '../license/license';
 
 const FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file' };
@@ -66,6 +67,13 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   registerCommands(context, controller, panel, license);
+
+  // Refresh the version-stable MCP/CLI runner copies in globalStorage so agent configs written
+  // by `leaklens.setupAgentGuardrails` keep working across extension updates. Fire-and-forget:
+  // it must never delay activation, and any failure is recovered at command time.
+  void ensureAgentRunners(context).catch(() => {
+    // Best-effort; the command re-runs this defensively before it needs the paths.
+  });
 
   for (const editor of vscode.window.visibleTextEditors) {
     void controller.scanNow(editor.document);

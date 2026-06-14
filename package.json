@@ -28,6 +28,9 @@
     "theme": "dark"
   },
   "main": "./dist/extension.js",
+  "bin": {
+    "leaklens": "./dist/cli.js"
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -44,6 +47,10 @@
       {
         "command": "leaklens.showSecretGraph",
         "title": "LeakLens: Show Secret Graph"
+      },
+      {
+        "command": "leaklens.setupAgentGuardrails",
+        "title": "LeakLens: Set up agent guardrails"
       },
       {
         "command": "leaklens.installGitHook",
@@ -130,5 +137,10 @@
     "tailwindcss": "^3.4.3",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ignore": "^5.3.2",
+    "zod": "^3.25.76"
   }
 }

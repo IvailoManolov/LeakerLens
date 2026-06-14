@@ -60,3 +60,35 @@ license verification — and that degrades gracefully when offline.
 
 Add `leaklens:ignore` anywhere on a line (e.g. `// leaklens:ignore`) to suppress findings
 on that line. The **Ignore here** quick-fix does this for you.
+
+## MCP server (for AI coding agents)
+
+LeakLens ships a local **MCP server** so AI coding agents — Claude Code, Cursor, Windsurf —
+can call the detection engine directly instead of parsing CLI text. It runs over stdio,
+entirely on your machine, with **no network calls**. Start it with `leaklens mcp`.
+
+Register it with your agent (Claude Code, Cursor, Windsurf, …):
+
+```json
+{
+  "mcpServers": {
+    "leaklens": {
+      "command": "npx",
+      "args": ["leaklens", "mcp"]
+    }
+  }
+}
+```
+
+Three tools are exposed:
+
+| Tool | What it does |
+|---|---|
+| `scan_text` | Scan a snippet of code/text for secrets **before** writing it to disk. |
+| `scan_file` | Scan a single file on disk. |
+| `scan_workspace` | Sweep the workspace (or given paths), respecting `.gitignore`. |
+
+Each tool returns a short human summary **and** a structured `{ findings, summary }` object,
+byte-for-byte consistent with `leaklens scan --json`. **Privacy:** results carry only a
+**masked preview** and a non-reversible **fingerprint** of each match — the raw secret is
+never returned, not even for `scan_text` where the agent supplied the text.
