@@ -1,0 +1,43 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LeakLens">
+  <!-- LeakLens store icon: a magnifying lens (the "lens") inspecting a keyhole
+       (the "secret"), on a brand-navy rounded app tile. Source of media/icon.png. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10203c"/>
+      <stop offset="1" stop-color="#0a1020"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="58" y1="46" x2="170" y2="172" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34e0ea"/>
+      <stop offset="0.55" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#5b7cfa"/>
+    </linearGradient>
+    <radialGradient id="glass" cx="0.36" cy="0.30" r="0.9">
+      <stop offset="0" stop-color="#c8f3ff" stop-opacity="0.26"/>
+      <stop offset="0.6" stop-color="#38bdf8" stop-opacity="0.09"/>
+      <stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="130" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App tile -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#sheen)"/>
+  <rect x="8.75" y="8.75" width="238.5" height="238.5" rx="55.25" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1.5"/>
+
+  <!-- Handle (tucked behind the lens) -->
+  <line x1="150" y1="150" x2="198" y2="198" stroke="#0a1020" stroke-width="30" stroke-linecap="round"/>
+  <line x1="150" y1="150" x2="198" y2="198" stroke="url(#ring)" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- Lens glass + ring -->
+  <circle cx="104" cy="104" r="60" fill="url(#glass)"/>
+  <circle cx="104" cy="104" r="60" stroke="url(#ring)" stroke-width="14" fill="none"/>
+
+  <!-- Keyhole (the secret under the lens) -->
+  <g fill="#f5fbff">
+    <circle cx="104" cy="96" r="15"/>
+    <path d="M97 104 H111 L116 138 H92 Z"/>
+  </g>
+</svg>

@@ -2,6 +2,30 @@
 
 All notable changes to LeakLens are documented here.
 
+## [4.0.0] — 2026-06-29
+
+**Milestone release.** LeakLens 4.0 marks the point where the local detection engine reaches
+all the way around your workflow — **as you type** (diagnostics, hovers, one-click fixes), **on
+demand** (Scan Workspace + the List · Tree · Map Findings panel), **in the terminal and CI**
+(the headless `leaklens` CLI with `--json` / `--sarif` and gate-able exit codes), **inside your
+AI coding agents** (the `leaklens mcp` stdio server + one-step `Set up agent guardrails`), and
+**before you commit** (the opt-in pre-commit guard). All of it runs **100% locally** across
+**46 precision-first detectors** — nothing ever leaves your machine.
+
+### Changed
+
+- **Refreshed brand + store presentation.** A new, higher-fidelity marketplace icon (gradient
+  brand tile, gradient lens, glass highlight, crisp keyhole — authored as a scalable SVG and
+  exported to a 256×256 PNG) and a polished Marketplace/README presentation page.
+- Documentation updated to present the full 4.0 surface area (editor · CLI · MCP · agent
+  guardrails · pre-commit guard) as one coherent local-only product.
+
+### Compatibility
+
+- **No detection-behavior changes** since 3.1.1 — the engine, the 46 rules, the `.env`/`.gitignore`
+  policy, and the scan-latency budget are byte-for-byte unchanged. Upgrading from 3.x is safe and
+  requires no configuration changes. The major version marks the milestone, not a breaking change.
+
 ## [3.1.1] — 2026-06-21
 
 ### Fixed

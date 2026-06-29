@@ -1,7 +1,8 @@
 # Everything is excluded except the bundled output + manifest assets.
 **
 !dist/**
-!media/**
+!media/icon.png
+!media/icon.svg
 !package.json
 !README.md
 !LICENSE

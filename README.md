@@ -4,6 +4,13 @@
 before you commit** — with **100% of analysis running locally**. Nothing ever leaves your
 machine. No account, no cloud, no telemetry of your code.
 
+> **Local-only · 46 precision-first detectors · catches secrets as you type, in CI, and inside your AI coding agents · zero telemetry.**
+
+LeakLens reaches around your whole workflow from one local engine — **in the editor** (squiggles,
+hovers, one-click fixes), **on demand** (Scan Workspace + a List · Tree · Map Findings panel),
+**in the terminal and CI** (the `leaklens` CLI with JSON/SARIF output), **inside your AI agents**
+(an `leaklens mcp` server), and **before you commit** (an opt-in git guard).
+
 ## Why LeakLens
 
 - **Local-only, always.** Detection never makes a network call. Your code and findings
