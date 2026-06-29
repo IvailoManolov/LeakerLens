@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import { runTests } from '@vscode/test-electron';
 
 /**
@@ -29,9 +30,17 @@ async function main(): Promise<void> {
     // no longer accepts. Fall back to the downloaded VS Code (which will fail with the
     // sandbox flags error) if neither is available — the compile-only check still passes.
     const useShim = fs.existsSync(SHIM_PATH) && fs.existsSync(SYSTEM_CODE_EXE);
+
+    // Open an empty temp folder as the single workspace folder so tests that exercise
+    // workspace-scoped behavior (e.g. .gitignore-aware scanning) have a real folder root for
+    // `vscode.workspace.getWorkspaceFolder`. Launching with the first folder up front avoids the
+    // extension-host restart that `updateWorkspaceFolders` would trigger on an empty window.
+    const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'leaklens-ws-'));
+    const launchArgs = [workspaceDir];
+
     const opts = useShim
-      ? { extensionDevelopmentPath, extensionTestsPath, vscodeExecutablePath: SHIM_PATH }
-      : { extensionDevelopmentPath, extensionTestsPath };
+      ? { extensionDevelopmentPath, extensionTestsPath, vscodeExecutablePath: SHIM_PATH, launchArgs }
+      : { extensionDevelopmentPath, extensionTestsPath, launchArgs };
 
     await runTests(opts);
   } catch (err) {

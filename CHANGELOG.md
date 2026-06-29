@@ -2,6 +2,17 @@
 
 All notable changes to LeakLens are documented here.
 
+## [3.1.1] — 2026-06-21
+
+### Fixed
+
+- **Workspace scan now honors `.gitignore`.** `Scan Workspace` previously reported secrets in
+  gitignored, generated directories (e.g. `.next/`, `.terraform/`, custom `reports/`) that the
+  hardcoded exclude list didn't cover — `vscode.workspace.findFiles` never reads `.gitignore`, so
+  these surfaced as "phantom" leaks the headless `leaklens` CLI already skipped. The scan now
+  filters its file list through each workspace folder's `.gitignore`, reusing the CLI's own ignore
+  logic for guaranteed parity. Gitignored `.env` files are still scanned and rendered green/"safe".
+
 ## [3.1.0] — 2026-06-14
 
 ### Added

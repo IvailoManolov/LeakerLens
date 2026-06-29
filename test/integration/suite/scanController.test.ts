@@ -15,7 +15,7 @@ import { mkdtempSync, writeFileSync, mkdirSync } from 'fs';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { isInScanScope, SCAN_EXCLUDE } from '../../../src/extension/scanScope';
+import { isInScanScope, SCAN_EXCLUDE, filterGitignored } from '../../../src/extension/scanScope';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -126,6 +126,43 @@ describe('scanScope — isInScanScope', () => {
     const fakePath = path.join(tmpdir(), 'myproject', '.git', 'COMMIT_EDITMSG');
     const uri = vscode.Uri.file(fakePath);
     assert.strictEqual(isInScanScope(uri), false, '.git URI must be out of scan scope');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// scanScope — filterGitignored honors the project .gitignore (CLI parity)
+//
+// findFiles never reads .gitignore; the workspace scan would otherwise flag secrets in
+// gitignored, generated files (build/test output) that the headless CLI skips. The host is
+// launched with an empty temp folder as workspaceFolders[0] (see runTest.ts) so these tests
+// have a real folder root for getWorkspaceFolder.
+// ---------------------------------------------------------------------------
+
+describe('scanScope — filterGitignored', () => {
+  it('drops files under a gitignored dir but keeps unignored siblings', () => {
+    const folders = vscode.workspace.workspaceFolders;
+    assert.ok(folders && folders.length > 0, 'integration host must open a workspace folder');
+    const root = folders[0].uri.fsPath;
+
+    // A .gitignore that ignores secrets/, plus an ignored and a visible secret file.
+    writeFileSync(path.join(root, '.gitignore'), 'node_modules/\nsecrets/\n', 'utf8');
+    mkdirSync(path.join(root, 'secrets'), { recursive: true });
+    writeFileSync(path.join(root, 'secrets', 'leak.ts'), SECRET_LINE, 'utf8');
+    mkdirSync(path.join(root, 'src'), { recursive: true });
+    writeFileSync(path.join(root, 'src', 'leak.ts'), SECRET_LINE, 'utf8');
+
+    const ignored = vscode.Uri.file(path.join(root, 'secrets', 'leak.ts'));
+    const visible = vscode.Uri.file(path.join(root, 'src', 'leak.ts'));
+
+    const kept = filterGitignored([ignored, visible]).map((u) => u.fsPath);
+    assert.ok(!kept.includes(ignored.fsPath), 'gitignored file must be dropped from the scan');
+    assert.ok(kept.includes(visible.fsPath), 'non-ignored file must be kept');
+  });
+
+  it('keeps files that lie outside any workspace folder (no .gitignore root)', () => {
+    const outside = tempFile('outside.ts', SECRET_LINE); // created under tmpdir, not the workspace
+    const kept = filterGitignored([outside]).map((u) => u.fsPath);
+    assert.ok(kept.includes(outside.fsPath), 'file outside any workspace folder must be kept');
   });
 });
 

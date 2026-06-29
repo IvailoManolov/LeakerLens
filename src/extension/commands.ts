@@ -5,7 +5,7 @@ import type { ScanController } from './scanController';
 import type { PanelController } from './panel/panelController';
 import { applyRemediation, type RemediationArg } from './remediation';
 import { installPreCommitHook, uninstallPreCommitHook } from './git/preCommit';
-import { SCAN_EXCLUDE, SCAN_LIMIT } from './scanScope';
+import { SCAN_EXCLUDE, SCAN_LIMIT, filterGitignored } from './scanScope';
 import type { License } from '../license/license';
 import { ensureAgentRunners } from './agentRunners';
 import {
@@ -60,7 +60,12 @@ async function scanWorkspace(controller: ScanController, panel: PanelController)
         vscode.workspace.findFiles('**/{.env,.env.*,*.env}', SCAN_EXCLUDE, SCAN_LIMIT),
       ]);
       const seen = new Set<string>();
-      const files = [...allFiles, ...envFiles].filter((f) => {
+      // Honor each workspace folder's `.gitignore` for ordinary files so the editor scan matches
+      // the headless CLI — `findFiles` only applies SCAN_EXCLUDE and never reads `.gitignore`,
+      // which otherwise flagged secrets in gitignored, generated files (build/test output). The
+      // explicitly-enumerated `.env` variants are NOT filtered: a gitignored `.env` must still be
+      // scanned so it renders green/"safe" rather than disappearing from the panel.
+      const files = [...filterGitignored(allFiles), ...envFiles].filter((f) => {
         const key = f.toString();
         if (seen.has(key)) {
           return false;
