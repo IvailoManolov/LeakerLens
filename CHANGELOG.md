@@ -2,9 +2,9 @@
 
 All notable changes to LeakLens are documented here.
 
-## [4.0.0] — 2026-06-29
+## [5.0.0] — 2026-07-05
 
-**Milestone release.** LeakLens 4.0 marks the point where the local detection engine reaches
+**Milestone release.** LeakLens 5.0 marks the point where the local detection engine reaches
 all the way around your workflow — **as you type** (diagnostics, hovers, one-click fixes), **on
 demand** (Scan Workspace + the List · Tree · Map Findings panel), **in the terminal and CI**
 (the headless `leaklens` CLI with `--json` / `--sarif` and gate-able exit codes), **inside your
@@ -14,10 +14,16 @@ AI coding agents** (the `leaklens mcp` stdio server + one-step `Set up agent gua
 
 ### Changed
 
+- **LeakLens is now completely free.** The Pro tier is gone: commit-blocking
+  (`leaklens.commitBlocking`) works for everyone with no license key, and the
+  `LeakLens: Activate Pro License` command and offline license gate have been removed.
+  LeakLens now makes **zero** network requests — there is no longer even a license check.
 - **Refreshed brand + store presentation.** A new, higher-fidelity marketplace icon (gradient
   brand tile, gradient lens, glass highlight, crisp keyhole — authored as a scalable SVG and
   exported to a 256×256 PNG) and a polished Marketplace/README presentation page.
-- Documentation updated to present the full 4.0 surface area (editor · CLI · MCP · agent
+- **Bundled attribution.** The gitleaks (MIT) pattern attribution now ships inside the
+  extension as `THIRD_PARTY_NOTICES.md`.
+- Documentation updated to present the full 5.0 surface area (editor · CLI · MCP · agent
   guardrails · pre-commit guard) as one coherent local-only product.
 
 ### Compatibility

@@ -278,7 +278,7 @@ export function buildInstructionBlock(cliRunnerPath: string): string {
     'Before writing code that may contain credentials, and before finishing a task, check for hardcoded secrets:',
     '',
     '- **MCP (preferred):** call `leaklens.scan_text` on file contents before writing them; use `leaklens.scan_workspace` to audit. The `leaklens` MCP server is configured for this project.',
-    `- **CLI:** run \`node "${cli}" scan\` (or \`npx leaklens scan\` if installed). A non-zero exit code means a secret was found. Use \`--json\` for machine-readable output.`,
+    `- **CLI:** run \`node "${cli}" scan\`. A non-zero exit code means a secret was found. Use \`--json\` for machine-readable output.`,
     '- Never hardcode API keys, tokens, or private keys. Put secrets in a gitignored `.env` file and read them at runtime.',
     '- LeakLens only ever reports a masked preview + fingerprint — it never echoes the raw secret.',
   ].join('\n');

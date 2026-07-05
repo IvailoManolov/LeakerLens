@@ -1,14 +1,13 @@
 LeakLens — End User License Agreement (EULA)
 Copyright (c) 2026 LeakLens. All rights reserved.
-Version 1.0 — effective 2026-06-14.
+Version 2.0 — effective 2026-07-05.
 
 This software ("LeakLens") is licensed, not sold. By installing or using it, you agree to
 these terms.
 
 1. License grant. You are granted a personal, non-exclusive, non-transferable, revocable
    license to install and use LeakLens for your own and your organization's software-
-   development purposes. The free tier may be used at no charge. Pro features, where present,
-   require a valid Pro license key.
+   development purposes, free of charge.
 
 2. Restrictions. You may not: (a) redistribute, resell, rent, sublicense, or publish the
    extension or its source code; (b) modify, reverse-engineer, decompile, or create
@@ -16,13 +15,12 @@ these terms.
    license/attribution notices. Nothing here limits rights granted to you by applicable law
    that cannot be waived by contract.
 
-3. Privacy. LeakLens performs all secret detection locally and transmits no source code,
-   secrets, or findings off your machine. The only network access it may make is
-   offline-capable license verification, which degrades gracefully when offline.
+3. Privacy. LeakLens performs all secret detection locally and makes no network requests.
+   No source code, secrets, or findings ever leave your machine.
 
 4. Third-party components. LeakLens includes secret-detection patterns adapted from
    open-source projects (notably gitleaks, MIT). Those components remain under their original
-   licenses; see the bundled attribution at src/engine/rules/catalog/CREDITS.md.
+   licenses; see the bundled THIRD_PARTY_NOTICES.md for attribution and license text.
 
 5. No warranty. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A

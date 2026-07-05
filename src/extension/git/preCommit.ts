@@ -7,7 +7,7 @@ const MARKER = 'leaklens-precommit';
 /**
  * Install the opt-in pre-commit guard into `<folder>/.git/hooks`. Copies the bundled
  * runner locally (robust across extension updates) and writes a `pre-commit` shell that
- * invokes it. `blocking` is baked in at install time (Pro-gated by the caller).
+ * invokes it. `blocking` is baked in at install time (from the `leaklens.commitBlocking` setting).
  */
 export async function installPreCommitHook(
   extensionUri: vscode.Uri,

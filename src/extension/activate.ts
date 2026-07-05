@@ -6,7 +6,6 @@ import { LeakCodeActionProvider } from './codeActions';
 import { PanelController } from './panel/panelController';
 import { registerCommands } from './commands';
 import { ensureAgentRunners } from './agentRunners';
-import { License } from '../license/license';
 
 const FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file' };
 
@@ -18,7 +17,6 @@ export function activate(context: vscode.ExtensionContext): void {
   const normalDecoration = createGutterDecoration();
   const envSafeDecoration = createEnvSafeDecoration();
   const controller = new ScanController({ normal: normalDecoration, envSafe: envSafeDecoration });
-  const license = new License(context.globalState);
   const panel = new PanelController(context.extensionUri, controller);
 
   // Re-color open `.env` files when `.gitignore` changes (the cached gitignore answer is stale).
@@ -66,7 +64,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  registerCommands(context, controller, panel, license);
+  registerCommands(context, controller, panel);
 
   // Refresh the version-stable MCP/CLI runner copies in globalStorage so agent configs written
   // by `leaklens.setupAgentGuardrails` keep working across extension updates. Fire-and-forget:

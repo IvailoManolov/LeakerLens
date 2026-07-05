@@ -6,7 +6,6 @@ import type { PanelController } from './panel/panelController';
 import { applyRemediation, type RemediationArg } from './remediation';
 import { installPreCommitHook, uninstallPreCommitHook } from './git/preCommit';
 import { SCAN_EXCLUDE, SCAN_LIMIT, filterGitignored } from './scanScope';
-import type { License } from '../license/license';
 import { ensureAgentRunners } from './agentRunners';
 import {
   AGENT_TARGETS,
@@ -23,7 +22,6 @@ export function registerCommands(
   context: vscode.ExtensionContext,
   controller: ScanController,
   panel: PanelController,
-  license: License,
 ): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('leaklens.scanWorkspace', () => scanWorkspace(controller, panel)),
@@ -38,10 +36,9 @@ export function registerCommands(
       addEnvToGitignore(uriStr, controller),
     ),
     vscode.commands.registerCommand('leaklens.installGitHook', () =>
-      installGitHook(context.extensionUri, license),
+      installGitHook(context.extensionUri),
     ),
     vscode.commands.registerCommand('leaklens.uninstallGitHook', () => uninstallGitHook()),
-    vscode.commands.registerCommand('leaklens.activateLicense', () => activateLicense(license)),
     vscode.commands.registerCommand('leaklens.setupAgentGuardrails', () =>
       setupAgentGuardrails(context),
     ),
@@ -139,30 +136,24 @@ async function showSecretGraph(controller: ScanController, panel: PanelControlle
   panel.setView('map');
 }
 
-async function installGitHook(extensionUri: vscode.Uri, license: License): Promise<void> {
+async function installGitHook(extensionUri: vscode.Uri): Promise<void> {
   const folder = firstWorkspaceFolder();
   if (!folder) {
     void vscode.window.showWarningMessage('LeakLens: open a folder to install the pre-commit guard.');
     return;
   }
-  const blocking = readConfig().commitBlocking && license.isPro();
+  const blocking = readConfig().commitBlocking;
   try {
     await installPreCommitHook(extensionUri, folder.uri, blocking);
   } catch (err) {
     void vscode.window.showErrorMessage(`LeakLens: ${(err as Error).message}`);
     return;
   }
-  if (readConfig().commitBlocking && !license.isPro()) {
-    void vscode.window.showInformationMessage(
-      'LeakLens pre-commit guard installed (warn-only). Commit-blocking is a Pro feature.',
-    );
-  } else {
-    void vscode.window.showInformationMessage(
-      blocking
-        ? 'LeakLens pre-commit guard installed — commits with secrets will be blocked.'
-        : 'LeakLens pre-commit guard installed (warn-only).',
-    );
-  }
+  void vscode.window.showInformationMessage(
+    blocking
+      ? 'LeakLens pre-commit guard installed — commits with secrets will be blocked.'
+      : 'LeakLens pre-commit guard installed (warn-only).',
+  );
 }
 
 /**
@@ -170,7 +161,7 @@ async function installGitHook(extensionUri: vscode.Uri, license: License): Promi
  * workspace's AI-agent tooling with zero manual config editing: merges a `leaklens` MCP server
  * into the selected agents' config files and writes a concise instruction block into
  * `AGENTS.md` (and `CLAUDE.md` if present + Claude selected). Idempotent — re-running yields
- * identical files. This command itself is free; commit-blocking gating stays in the hook path.
+ * identical files.
  */
 async function setupAgentGuardrails(context: vscode.ExtensionContext): Promise<void> {
   const folder = firstWorkspaceFolder();
@@ -299,21 +290,6 @@ async function uninstallGitHook(): Promise<void> {
   }
   await uninstallPreCommitHook(folder.uri);
   void vscode.window.showInformationMessage('LeakLens pre-commit guard removed.');
-}
-
-async function activateLicense(license: License): Promise<void> {
-  const key = await vscode.window.showInputBox({
-    prompt: 'Enter your LeakLens Pro license key',
-    ignoreFocusOut: true,
-    placeHolder: 'xxxxxxxx.xxxxxxxx',
-  });
-  if (!key) {
-    return;
-  }
-  const ok = await license.activate(key.trim());
-  void (ok
-    ? vscode.window.showInformationMessage('LeakLens Pro activated — thank you! ✓')
-    : vscode.window.showWarningMessage('That license key could not be verified.'));
 }
 
 function firstWorkspaceFolder(): vscode.WorkspaceFolder | undefined {

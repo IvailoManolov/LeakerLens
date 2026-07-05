@@ -2,9 +2,10 @@
   "name": "leaklens",
   "displayName": "LeakLens",
   "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "publisher": "leaklens",
   "license": "SEE LICENSE IN LICENSE",
+  "pricing": "Free",
   "repository": {
     "type": "git",
     "url": "https://github.com/IvailoManolov/LeakerLens"
@@ -60,10 +61,6 @@
       {
         "command": "leaklens.uninstallGitHook",
         "title": "LeakLens: Remove Pre-commit Guard (this repo)"
-      },
-      {
-        "command": "leaklens.activateLicense",
-        "title": "LeakLens: Activate Pro License"
       }
     ],
     "viewsContainers": {
@@ -102,7 +99,7 @@
         "leaklens.commitBlocking": {
           "type": "boolean",
           "default": false,
-          "description": "When the pre-commit guard is installed, block commits that contain secrets (Pro). When off, the guard warns only."
+          "description": "When the pre-commit guard is installed, block commits that contain secrets. When off, the guard warns only."
         },
         "leaklens.maxFileSizeKb": {
           "type": "number",
@@ -131,7 +128,7 @@
     "@types/vscode": "^1.75.0",
     "@vitest/coverage-v8": "^1.6.0",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^2.24.0",
+    "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.20.2",
     "glob": "^10.3.10",
     "mocha": "^10.4.0",

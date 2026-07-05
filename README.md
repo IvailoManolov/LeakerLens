@@ -4,7 +4,7 @@
 before you commit** — with **100% of analysis running locally**. Nothing ever leaves your
 machine. No account, no cloud, no telemetry of your code.
 
-> **Local-only · 46 precision-first detectors · catches secrets as you type, in CI, and inside your AI coding agents · zero telemetry.**
+> **Completely free · local-only · 46 precision-first detectors · catches secrets as you type, in CI, and inside your AI coding agents · zero telemetry.**
 
 LeakLens reaches around your whole workflow from one local engine — **in the editor** (squiggles,
 hovers, one-click fixes), **on demand** (Scan Workspace + a List · Tree · Map Findings panel),
@@ -32,7 +32,8 @@ hovers, one-click fixes), **on demand** (Scan Workspace + a List · Tree · Map 
   severity, sized by reference count) linked to the files they appear in; drag, hover, and
   click to jump.
 - **Scan Workspace** command for an on-demand sweep.
-- Opt-in **git pre-commit guard** that warns (or, with Pro, blocks) on staged secrets.
+- Opt-in **git pre-commit guard** that warns on staged secrets — or blocks the commit, if
+  you turn on the `leaklens.commitBlocking` setting.
 
 ## Detected secret types
 
@@ -63,19 +64,18 @@ signal stays high.
 | `LeakLens: Set up agent guardrails` | Wire the scanner into your AI agents (MCP + `AGENTS.md` + git hook) |
 | `LeakLens: Install Pre-commit Guard` | Add the opt-in git hook to this repo |
 | `LeakLens: Remove Pre-commit Guard` | Remove it |
-| `LeakLens: Activate Pro License` | Enter an offline Pro key |
 
-## Free vs Pro
+## Completely free
 
-The free tier — real-time detection, the headline ruleset, and manual fixes — is genuinely
-useful forever. **Pro** adds commit-blocking policy and (coming) custom rule packs and
-report export. Licenses are verified **offline** — a valid key works on a plane.
+Everything in LeakLens — real-time detection, all 46 detectors, one-click fixes, the
+Findings panel, the Secret Graph, the CLI, the MCP server, and the commit-blocking
+pre-commit guard — is **free**. No account, no license key, no upsell.
 
 ## Privacy
 
-LeakLens performs **no network requests** for detection and collects **no telemetry** of
-your code, secrets, or findings. The only network access the product ever makes is offline
-license verification — and that degrades gracefully when offline.
+LeakLens performs **no network requests** and collects **no telemetry** of your code,
+secrets, or findings. Detection, the CLI, and the MCP server all run entirely on your
+machine.
 
 ## Inline ignore
 
@@ -84,12 +84,15 @@ on that line. The **Ignore here** quick-fix does this for you.
 
 ## Command-line scanner
 
-LeakLens ships a headless CLI, so the same engine runs in your terminal and in CI:
+LeakLens bundles a headless CLI, so the same engine runs in your terminal and in CI.
+Run **`LeakLens: Set up agent guardrails`** once and it provisions a stable copy of the CLI
+(surviving extension updates) and writes the exact, ready-to-copy invocation into your
+project's `AGENTS.md`:
 
 ```sh
-leaklens scan src            # human-readable
-leaklens scan src --json     # machine-readable JSON
-leaklens scan src --sarif    # SARIF 2.1.0 (GitHub code scanning, CI)
+node "<path-to-provisioned-cli>" scan src            # human-readable
+node "<path-to-provisioned-cli>" scan src --json     # machine-readable JSON
+node "<path-to-provisioned-cli>" scan src --sarif    # SARIF 2.1.0 (GitHub code scanning, CI)
 ```
 
 The exit code is `0` when clean and `1` when secrets are found, so it cleanly gates a CI step or
@@ -98,18 +101,20 @@ masked previews — never the raw secret.
 
 ## MCP server (for AI coding agents)
 
-LeakLens ships a local **MCP server** so AI coding agents — Claude Code, Cursor, Windsurf —
-can call the detection engine directly instead of parsing CLI text. It runs over stdio,
-entirely on your machine, with **no network calls**. Start it with `leaklens mcp`.
+LeakLens bundles a local **MCP server** so AI coding agents — Claude Code, Cursor, VS Code
+agent mode — can call the detection engine directly instead of parsing CLI text. It runs
+over stdio, entirely on your machine, with **no network calls**.
 
-Register it with your agent (Claude Code, Cursor, Windsurf, …):
+You don't configure it by hand: run **`LeakLens: Set up agent guardrails`** and LeakLens
+registers itself with the agents you pick, writing an entry like this into their MCP config
+(`.mcp.json`, `.vscode/mcp.json`, or `.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "leaklens": {
-      "command": "npx",
-      "args": ["leaklens", "mcp"]
+      "command": "node",
+      "args": ["<path-to-provisioned-mcp-server>"]
     }
   }
 }
@@ -124,7 +129,7 @@ Three tools are exposed:
 | `scan_workspace` | Sweep the workspace (or given paths), respecting `.gitignore`. |
 
 Each tool returns a short human summary **and** a structured `{ findings, summary }` object,
-byte-for-byte consistent with `leaklens scan --json`. **Privacy:** results carry only a
+byte-for-byte consistent with the CLI's `--json` output. **Privacy:** results carry only a
 **masked preview** and a non-reversible **fingerprint** of each match — the raw secret is
 never returned, not even for `scan_text` where the agent supplied the text.
 
@@ -137,6 +142,7 @@ config editing.
 
 ## License
 
-LeakLens is proprietary — free to install and use, no redistribution. See [LICENSE](LICENSE).
-Detection patterns adapted from gitleaks (MIT) are credited in
-[`src/engine/rules/catalog/CREDITS.md`](src/engine/rules/catalog/CREDITS.md).
+LeakLens is **completely free** to install and use. The code is proprietary (no
+redistribution) — see [LICENSE](LICENSE). Detection patterns adapted from
+[gitleaks](https://github.com/gitleaks/gitleaks) (MIT) are credited in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which ships with the extension.
