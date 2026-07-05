@@ -5,6 +5,7 @@
  */
 import { DEFAULT_RULESET } from './rules';
 import { shannonEntropy } from './entropy';
+import { fingerprint } from './fingerprint';
 import type {
   Finding,
   Remediation,
@@ -107,6 +108,7 @@ function collectMatches(
       line,
       column: start - lineStarts[line],
       matchPreview: rule.mask(value),
+      fingerprint: fingerprint(value),
       message: rule.message,
       remediations: buildRemediations(rule.remediations ?? DEFAULT_REMEDIATION_KINDS),
       ...(entropy !== undefined ? { entropy } : {}),
@@ -116,9 +118,11 @@ function collectMatches(
 }
 
 /**
- * Keep only non-overlapping findings. Sorted by start, then longest, then most severe,
- * so the most specific/severe finding wins any overlap (e.g. an AWS key beats the
- * generic high-entropy match over the same span).
+ * Keep only non-overlapping findings. Sorted by start, then most severe, then longest, then
+ * `ruleId` as a final tiebreaker, so the most specific/severe finding wins any overlap (e.g.
+ * an AWS key beats the generic high-entropy match over the same span). The `ruleId` tiebreaker
+ * only fires when start, severity, and end all tie — it never changes which findings survive
+ * `dedupeOverlaps`, only making *which* equal finding wins fully deterministic.
  */
 function compareFindings(a: Finding, b: Finding): number {
   if (a.start !== b.start) {
@@ -127,7 +131,10 @@ function compareFindings(a: Finding, b: Finding): number {
   if (a.severity !== b.severity) {
     return SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
   }
-  return b.end - a.end;
+  if (a.end !== b.end) {
+    return b.end - a.end;
+  }
+  return a.ruleId.localeCompare(b.ruleId);
 }
 
 function dedupeOverlaps(findings: Finding[]): Finding[] {

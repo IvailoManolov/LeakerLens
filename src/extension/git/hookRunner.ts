@@ -4,7 +4,7 @@
  * VS Code, no network. Reads staged blobs via git and scans them.
  *
  * Exit code: 0 = allow commit (warn-only or clean); 1 = block (only when
- * `LEAKLENS_BLOCK=1`, set by the installer when commit-blocking is enabled for Pro).
+ * `LEAKLENS_BLOCK=1`, set by the installer when commit-blocking is enabled).
  */
 import { execFileSync } from 'child_process';
 import { scanText } from '../../engine';

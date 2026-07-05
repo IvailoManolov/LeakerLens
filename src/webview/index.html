@@ -2,9 +2,9 @@
   Reference shell for the LeakLens findings panel.
 
   The extension host (panelController.ts) generates the real HTML at runtime so it can
-  inject a Content-Security-Policy nonce and the webview-safe resource URIs. This file
-  documents the structure the host mirrors and is scanned by Tailwind so the classes the
-  client uses are kept in the purged build.
+  inject a Content-Security-Policy nonce and the webview-safe resource URIs. main.ts then
+  renders the List or Tree view into #app. This file documents the structure and is scanned
+  by Tailwind alongside main.ts so the utility classes survive the purged build.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -14,26 +14,47 @@
   </head>
   <body class="text-base text-fg">
     <div id="app" class="flex flex-col h-full">
-      <!-- Header -->
-      <header class="flex items-center justify-between px-3 py-2 border-b border-border">
-        <span class="font-medium">LeakLens</span>
-        <button class="px-2 py-1 rounded bg-btnSecondary text-btnSecondaryFg hover:bg-hover">Rescan</button>
-      </header>
+      <div id="hdr">
+        <header class="px-3 py-2 border-b border-border">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-medium">LeakLens</span>
+            <div class="flex items-center gap-2">
+              <div class="inline-flex rounded overflow-hidden border border-border">
+                <button class="px-2 py-0.5 bg-active text-fg">List</button>
+                <button class="px-2 py-0.5 text-muted hover:bg-hover">Tree</button>
+              </div>
+              <button class="px-2 py-1 rounded bg-btnSecondary text-btnSecondaryFg hover:bg-hover">Rescan</button>
+            </div>
+          </div>
+          <input type="text" placeholder="Filter secrets…"
+                 class="w-full mt-2 px-2 py-1 rounded bg-bg border border-border text-fg placeholder:text-muted outline-none" />
+        </header>
+      </div>
 
-      <!-- Empty state -->
-      <div class="flex flex-1 items-center justify-center text-ok">No secrets detected — you're clean ✓</div>
-
-      <!-- A finding row (rendered dynamically) -->
-      <div class="group px-3 py-2 border-l-2 border-critical hover:bg-hover cursor-pointer">
-        <div class="flex items-center gap-2">
-          <span class="text-critical font-medium">AWS Access Key ID</span>
-          <span class="text-muted">file.ts:12</span>
-        </div>
-        <code class="font-mono text-muted">AKIA…********</code>
-        <div class="flex gap-2 mt-1 opacity-0 group-hover:opacity-100">
-          <button class="text-link hover:underline">Ignore here</button>
-          <button class="text-link hover:underline">Mask value</button>
-          <button class="text-link hover:underline">Move to .env</button>
+      <div id="body" class="flex flex-1 flex-col overflow-auto">
+        <!-- Tree view: secret → file → line. The border-ok / text-ok classes below are used
+             for safe (gitignored .env) nodes; include them here so Tailwind's purge pass
+             keeps them even when no such node appears in the static reference HTML. -->
+        <div class="px-3 py-1 text-xs text-muted">2 secret(s) · 3 reference(s)</div>
+        <!-- safe-node sentinel (never visible — Tailwind purge anchor only) -->
+        <div class="hidden border-l-2 border-ok text-ok"></div>
+        <div class="border-l-2 border-critical">
+          <div class="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-hover">
+            <span class="text-muted w-3 inline-block">▾</span>
+            <span class="text-critical">●</span>
+            <span class="text-critical font-medium">AWS Access Key ID</span>
+            <code class="font-mono text-muted break-all flex-1 truncate">AKIA…********</code>
+            <span class="px-1.5 rounded bg-badge text-badgeFg text-xs">2</span>
+            <span class="px-1.5 rounded bg-badge text-badgeFg text-xs">2</span>
+          </div>
+          <div class="flex items-center gap-2 pl-7 pr-3 py-1 cursor-pointer hover:bg-hover">
+            <span class="text-muted w-3 inline-block">▸</span>
+            <span class="truncate">src/config.ts</span>
+            <span class="px-1.5 rounded bg-badge text-badgeFg text-xs">1</span>
+          </div>
+          <div class="flex items-center gap-2 pl-10 pr-3 py-0.5 cursor-pointer hover:bg-hover text-muted">
+            <span class="font-mono">12:11</span>
+          </div>
         </div>
       </div>
     </div>

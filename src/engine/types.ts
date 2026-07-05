@@ -34,6 +34,8 @@ export interface Finding {
   readonly column: number;
   /** Masked, safe-to-display preview of the matched value. */
   readonly matchPreview: string;
+  /** Stable, non-reversible hash of the raw matched value; identical secrets share it. */
+  readonly fingerprint: string;
   /** Shannon entropy of the matched value when entropy-gated; otherwise omitted. */
   readonly entropy?: number;
   /** Short, calm explanation for the hover / diagnostic. */

@@ -52,3 +52,26 @@ export function isExamplePath(filename: string): boolean {
     filename,
   );
 }
+
+/** Committed-on-purpose dotenv variants that hold only placeholders, never real secrets. */
+const ENV_TEMPLATE_SUFFIXES: readonly string[] = ['.example', '.sample', '.template', '.dist', '.defaults'];
+
+/**
+ * True when `filename` is a real, secret-bearing dotenv file: `.env`, `.env.local`,
+ * `.env.production`, `app.env`, etc. The template variants above are excluded — secrets
+ * belong in a `.env` file, so the extension treats matches here as expected (rendered green).
+ * Single source of truth shared by the env-file detection rule and the extension glue.
+ */
+export function isEnvFile(filename: string): boolean {
+  const parts = filename.split(/[\\/]/);
+  const name = parts[parts.length - 1].toLowerCase();
+  // `*.env` (e.g. `production.env`) — but not a bare file literally named "env".
+  if (name.endsWith('.env') && name !== '.env') {
+    return true;
+  }
+  // `.env` or `.env.<something>`, excluding the placeholder templates.
+  if (name === '.env' || name.startsWith('.env.')) {
+    return !ENV_TEMPLATE_SUFFIXES.some((suffix) => name.endsWith(suffix));
+  }
+  return false;
+}

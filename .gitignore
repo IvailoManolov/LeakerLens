@@ -6,3 +6,6 @@ coverage/
 .vscode-test/
 *.vsix
 *.log
+.sandbox/
+.env
+.claude/settings.local.json

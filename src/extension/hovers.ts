@@ -21,7 +21,10 @@ export class LeakHoverProvider implements vscode.HoverProvider {
     md.appendMarkdown(`**${finding.ruleName}**\n\n`);
     md.appendMarkdown(`${finding.message}\n\n`);
     md.appendMarkdown(`\`${finding.matchPreview}\`\n\n`);
-    md.appendMarkdown(actionLinks(document, finding));
+    // Safe findings (gitignored `.env`) are where they belong — offer no mask/move/ignore links.
+    if (!this.controller.isSafe(document.uri)) {
+      md.appendMarkdown(actionLinks(document, finding));
+    }
 
     const range = new vscode.Range(document.positionAt(finding.start), document.positionAt(finding.end));
     return new vscode.Hover(md, range);

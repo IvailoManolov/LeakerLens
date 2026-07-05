@@ -2,12 +2,13 @@
   "name": "leaklens",
   "displayName": "LeakLens",
   "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "publisher": "leaklens",
   "license": "SEE LICENSE IN LICENSE",
+  "pricing": "Free",
   "repository": {
     "type": "git",
-    "url": "https://github.com/leaklens/leaklens"
+    "url": "https://github.com/IvailoManolov/LeakerLens"
   },
   "engines": {
     "vscode": "^1.75.0"
@@ -27,7 +28,11 @@
     "color": "#0b1220",
     "theme": "dark"
   },
+  "icon": "media/icon.png",
   "main": "./dist/extension.js",
+  "bin": {
+    "leaklens": "./dist/cli.js"
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -42,16 +47,20 @@
         "title": "LeakLens: Show Findings Panel"
       },
       {
+        "command": "leaklens.showSecretGraph",
+        "title": "LeakLens: Show Secret Graph"
+      },
+      {
+        "command": "leaklens.setupAgentGuardrails",
+        "title": "LeakLens: Set up agent guardrails"
+      },
+      {
         "command": "leaklens.installGitHook",
         "title": "LeakLens: Install Pre-commit Guard (this repo)"
       },
       {
         "command": "leaklens.uninstallGitHook",
         "title": "LeakLens: Remove Pre-commit Guard (this repo)"
-      },
-      {
-        "command": "leaklens.activateLicense",
-        "title": "LeakLens: Activate Pro License"
       }
     ],
     "viewsContainers": {
@@ -90,7 +99,7 @@
         "leaklens.commitBlocking": {
           "type": "boolean",
           "default": false,
-          "description": "When the pre-commit guard is installed, block commits that contain secrets (Pro). When off, the guard warns only."
+          "description": "When the pre-commit guard is installed, block commits that contain secrets. When off, the guard warns only."
         },
         "leaklens.maxFileSizeKb": {
           "type": "number",
@@ -108,7 +117,7 @@
     "watch": "node esbuild.mjs --watch",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "pretest:integration": "tsc -p ./tsconfig.test.json",
+    "pretest:integration": "tsc -p ./tsconfig.test.json && node -e \"const fs=require('fs');fs.cpSync('test/integration/vscode-shim.js','out-test/test/integration/vscode-shim.js');fs.cpSync('test/integration/vscode-shim.cmd','out-test/test/integration/vscode-shim.cmd')\"",
     "test:integration": "node ./out-test/test/integration/runTest.js",
     "package": "npm run build && vsce package --no-dependencies",
     "vscode:prepublish": "npm run build"
@@ -118,13 +127,18 @@
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.75.0",
     "@vitest/coverage-v8": "^1.6.0",
-    "@vscode/test-electron": "^2.3.9",
-    "@vscode/vsce": "^2.24.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.20.2",
     "glob": "^10.3.10",
     "mocha": "^10.4.0",
     "tailwindcss": "^3.4.3",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ignore": "^5.3.2",
+    "zod": "^3.25.76"
   }
 }

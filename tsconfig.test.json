@@ -12,6 +12,9 @@
     "skipLibCheck": true,
     "types": ["node", "mocha", "vscode"]
   },
-  "include": ["test/integration/**/*.ts"],
+  "include": [
+    "test/integration/**/*.ts",
+    "src/extension/scanScope.ts"
+  ],
   "exclude": ["node_modules", "dist", "out"]
 }

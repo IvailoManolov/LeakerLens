@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { ScanController } from './scanController';
-import { createGutterDecoration } from './decorations';
+import { createGutterDecoration, createEnvSafeDecoration } from './decorations';
 import { LeakHoverProvider } from './hovers';
 import { LeakCodeActionProvider } from './codeActions';
 import { PanelController } from './panel/panelController';
 import { registerCommands } from './commands';
-import { License } from '../license/license';
+import { ensureAgentRunners } from './agentRunners';
 
 const FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file' };
 
@@ -14,16 +14,32 @@ const FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file' };
  * wires event listeners and providers, then scans whatever is already open.
  */
 export function activate(context: vscode.ExtensionContext): void {
-  const decorationType = createGutterDecoration();
-  const controller = new ScanController(decorationType);
-  const license = new License(context.globalState);
+  const normalDecoration = createGutterDecoration();
+  const envSafeDecoration = createEnvSafeDecoration();
+  const controller = new ScanController({ normal: normalDecoration, envSafe: envSafeDecoration });
   const panel = new PanelController(context.extensionUri, controller);
+
+  // Re-color open `.env` files when `.gitignore` changes (the cached gitignore answer is stale).
+  const gitignoreWatcher = vscode.workspace.createFileSystemWatcher('**/.gitignore');
+  const onGitignoreChange = (): void => {
+    controller.invalidateEnvCache();
+    for (const editor of vscode.window.visibleTextEditors) {
+      void controller.scanNow(editor.document);
+    }
+  };
+  gitignoreWatcher.onDidChange(onGitignoreChange);
+  gitignoreWatcher.onDidCreate(onGitignoreChange);
+  gitignoreWatcher.onDidDelete(onGitignoreChange);
 
   context.subscriptions.push(
     controller,
-    decorationType,
+    normalDecoration,
+    envSafeDecoration,
+    gitignoreWatcher,
     panel,
-    vscode.window.registerWebviewViewProvider(PanelController.viewId, panel),
+    vscode.window.registerWebviewViewProvider(PanelController.viewId, panel, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
     vscode.languages.registerHoverProvider(FILE_SELECTOR, new LeakHoverProvider(controller)),
     vscode.languages.registerCodeActionsProvider(FILE_SELECTOR, new LeakCodeActionProvider(controller), {
       providedCodeActionKinds: LeakCodeActionProvider.kinds,
@@ -48,10 +64,17 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  registerCommands(context, controller, panel, license);
+  registerCommands(context, controller, panel);
+
+  // Refresh the version-stable MCP/CLI runner copies in globalStorage so agent configs written
+  // by `leaklens.setupAgentGuardrails` keep working across extension updates. Fire-and-forget:
+  // it must never delay activation, and any failure is recovered at command time.
+  void ensureAgentRunners(context).catch(() => {
+    // Best-effort; the command re-runs this defensively before it needs the paths.
+  });
 
   for (const editor of vscode.window.visibleTextEditors) {
-    controller.scanNow(editor.document);
+    void controller.scanNow(editor.document);
   }
 }
 

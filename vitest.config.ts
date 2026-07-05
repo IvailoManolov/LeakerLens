@@ -7,7 +7,7 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
-    include: ['test/engine/**/*.test.ts', 'test/perf/**/*.test.ts'],
+    include: ['test/engine/**/*.test.ts', 'test/perf/**/*.test.ts', 'test/cli/**/*.test.ts', 'test/mcp/**/*.test.ts', 'test/extension/**/*.test.ts'],
     environment: 'node',
     coverage: {
       provider: 'v8',

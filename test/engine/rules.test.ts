@@ -71,6 +71,24 @@ describe('headline ruleset — positives', () => {
     expect(f).toHaveLength(1);
     expect(f[0].ruleId).toBe('dotenv-value-leak');
   });
+
+  it('detects an unquoted secret on a .env assignment line (only inside a .env file)', () => {
+    const ids_env = ids('DB_PASSWORD=hunter2longsecretvalue123', '/proj/.env');
+    expect(ids_env).toContain('dotenv-file-value');
+    // Same content in source code is NOT flagged by the env-file rule (filename-gated).
+    expect(ids('DB_PASSWORD=hunter2longsecretvalue123', 'src/app.ts')).not.toContain('dotenv-file-value');
+  });
+
+  it('detects an `export`-prefixed unquoted .env secret', () => {
+    expect(ids('export SECRET_TOKEN=aZ9kP3xR7mQ2wL5tN8vBcD', '.env')).toContain('dotenv-file-value');
+  });
+
+  it('dotenv-file-value rule offers only ignore/mask (moveToEnv is meaningless inside .env)', () => {
+    const f = scan('DB_PASSWORD=hunter2longsecretvalue123', '/proj/.env');
+    const fileValueFinding = f.find((x) => x.ruleId === 'dotenv-file-value');
+    expect(fileValueFinding).toBeDefined();
+    expect(fileValueFinding!.remediations.map((r) => r.kind)).toEqual(['ignore', 'mask']);
+  });
 });
 
 describe('headline ruleset — negatives (precision gates)', () => {
