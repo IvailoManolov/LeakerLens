@@ -21,8 +21,8 @@ configuration, zero friction, and zero data leaving their machine**. The product
 1. **LOCAL-ONLY. ALWAYS.** No network calls for detection. No telemetry of code content,
    ever. No "send to cloud to scan." This is the entire marketing moat — a server-based
    competitor *cannot* claim it. If a feature needs the network, it does not ship in the
-   detection path. (The *only* permitted network call is offline-verifiable license
-   activation — see Monetization — and even that must degrade gracefully offline.)
+   detection path. The product makes **no network calls at all** — there is no license
+   check, no telemetry, nothing.
 2. **ZERO MARGINAL COST.** No hosted backend, no per-user compute, no LLM/API inference.
    The business only works because each user costs ≈ €0. Any proposal that adds a runtime
    server cost is rejected by default.
@@ -75,7 +75,6 @@ src/
     panel        # The LeakLens findings webview (see UX rules).
     commands     # Ignore / move-to-env / mask / scan-workspace.
     git          # Pre-commit hook integration (local git hook, opt-in).
-  license/       # Offline license-key validation (see Monetization).
 ```
 **Rule:** `engine/` must never import `vscode`. This keeps detection portable, testable,
 and reusable (e.g. a future CLI) without dragging the editor in.
@@ -136,20 +135,13 @@ cluttered powerful one for this audience.
 
 ---
 
-## Monetization (build the seams in early, don't bolt on later)
+## Pricing
 
-- **Model:** Free tier + **Pro license**, license key validated **locally/offline**
-  (signed key verified with a bundled public key). No account required to use the product.
-- **Payments:** Lemon Squeezy or Polar as merchant-of-record (they handle EU VAT MOSS —
-  important, owner is EU-based). We never store card data or run a billing server.
-- **Free vs Pro split (provisional — keep the door open in code):**
-  - Free: core real-time detection, the headline rule set, manual fixes. Genuinely useful
-    forever — the free tier IS the marketing.
-  - Pro: custom org rule sets, commit-blocking policy, bulk workspace scan + report export,
-    advanced rule packs, priority. (Finalize later; just don't hardcode "everything free.")
-- **Gating must be clean:** a single `license.isPro()` check; Pro features degrade to a
-  tasteful upsell, never a broken state. Never nag free users aggressively.
-- **Activation degrades gracefully offline** — a valid key works on a plane. (Principle 1.)
+- **Completely free.** Every feature — real-time detection, all detectors, one-click fixes,
+  the Findings panel, the Secret Graph, the CLI, the MCP server, and the commit-blocking
+  pre-commit guard — is free. No account, no license key, no upsell.
+- **No network, no billing.** The product makes zero network requests and there is no billing
+  server or license check to maintain.
 
 ## Distribution ("build once, deploy everywhere")
 

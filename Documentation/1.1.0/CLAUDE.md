@@ -54,5 +54,4 @@ Secret (key)  →  File  →  Line:Col
 
 - The `dotenv-value-leak` rule can false-positive on long `UPPER_SNAKE = "…"` config
   constants (e.g. glob strings). Consider tightening its heuristic.
-- Carried over from 1.0.0: real license public key, marketplace PNG icon, worker-based
-  scanning for very large files.
+- Carried over from 1.0.0: marketplace PNG icon, worker-based scanning for very large files.

@@ -21,8 +21,7 @@ in the detection path, no telemetry, no backend.
 | Remediations | ✅ Ignore here / Mask value / Move to `.env` (quick-fix + hover + panel) |
 | Findings panel (Tailwind webview) | ✅ severity groups, click-to-jump, inline actions, reassuring empty state |
 | Workspace scan command | ✅ |
-| Git pre-commit guard | ✅ opt-in, warn-only (blocking is Pro-gated) |
-| License / `isPro()` seam | ✅ offline Ed25519 verification (placeholder public key — swap before publishing) |
+| Git pre-commit guard | ✅ opt-in; warn-only, or blocking via the `leaklens.commitBlocking` setting |
 | Build & packaging | ✅ esbuild bundles + Tailwind CLI + `vsce` → `leaklens-1.0.0.vsix` |
 
 ## Code map
@@ -33,7 +32,6 @@ src/
   extension/   VS Code glue: scan lifecycle, diagnostics, decorations, hovers, code
                actions, commands, the panel host, and the git hook installer.
   webview/     The Tailwind-styled findings panel client (browser bundle).
-  license/     Offline license verification + the single isPro() gate.
 test/
   engine/      Vitest unit tests — the 100% coverage gate.
   integration/ @vscode/test-electron smoke tests (activation, diagnostics, quick-fixes).
@@ -60,7 +58,5 @@ panel listens to. All detection is synchronous, local, and off the typing hot pa
 
 ## Known follow-ups (post-1.0.0)
 
-- Replace the placeholder license public key with the real distribution key.
 - Optional: ship a polished PNG marketplace icon (currently SVG activity-bar icon only).
 - Incremental/worker-based scanning for very large files (current guard skips files > 2MB).
-- Pro rule packs, report export (Monetization roadmap).

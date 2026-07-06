@@ -2,6 +2,11 @@
 
 All notable changes to LeakLens are documented here.
 
+## [5.0.2] — 2026-07-06
+
+Maintenance re-package. No functional or detection-behavior changes since 5.0.1 — same
+engine, rules, and fixes; version bump only.
+
 ## [5.0.1] — 2026-07-06
 
 ### Fixed

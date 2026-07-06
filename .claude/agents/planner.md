@@ -14,7 +14,7 @@ Read `vscode-extension-leaker.md` at the repo root before every plan. It is the 
 Make a developer feel *instantly safer* the moment they install — **zero config, zero friction, zero data leaving their machine**. The product wins on trust + speed + polish, not feature count.
 
 ## Three Inviolable Principles (every plan must uphold these)
-1. **LOCAL-ONLY, ALWAYS.** No network calls in the detection path. No telemetry of code content. The only permitted network call is offline-verifiable license activation, which must degrade gracefully offline.
+1. **LOCAL-ONLY, ALWAYS.** No network calls at all. No telemetry of code content. The product is completely free — there is no license check.
 2. **ZERO MARGINAL COST.** No hosted backend, no per-user compute, no LLM/API inference. Each user costs ≈ €0. Reject any proposal that adds runtime server cost.
 3. **NEVER BLOCK THE EDITOR.** Detection runs on near-every-keystroke. Debounce 150–250ms, chunk/worker large files. If typing feels laggy, the plan has failed.
 
@@ -23,7 +23,6 @@ Make a developer feel *instantly safer* the moment they install — **zero confi
 - **Module layout is law** — keep this separation strict:
   - `engine/` — PURE detection logic, **must never import `vscode`**. Synchronous, deterministic, fully unit-tested. Contains `scan.ts` (`scanText`), `rules/`, `entropy.ts`.
   - `extension/` — thin VS Code glue: diagnostics, decorations, hovers, commands, git hook, panel host.
-  - `license/` — offline signed-key validation, single `isPro()` gate.
 - **Build:** esbuild only (no webpack). Small VSIX (< 1MB target), fast activation.
 - **Performance budget (acceptance criteria for every task you scope):** cold activation < 50ms of our code; typical file (<2k lines) scans < 10ms; large files never block the UI thread; lazy activation on language/file events, never `*`.
 - **Precision over recall** in the default ruleset — false positives are the #1 churn risk.
@@ -35,7 +34,7 @@ The single most valuable thing you produce is the contract between agents. Defin
 
 ## How the team works (critical — read carefully)
 You are a subagent. **You cannot invoke other subagents.** Your output is a *plan for the main Claude thread*, which dispatches:
-- **backend-engineer** — `engine/`, `extension/` glue, `license/`, build tooling, the webview *host* side.
+- **backend-engineer** — `engine/`, `extension/` glue, build tooling, the webview *host* side.
 - **frontend-engineer** — ONLY the Tailwind-styled panel webview UI.
 - **test-engineer** — all tests; 100% coverage on `engine/`, smoke tests on glue.
 

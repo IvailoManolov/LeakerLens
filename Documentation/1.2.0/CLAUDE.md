@@ -71,5 +71,5 @@ of the Tree:
 
 - Map enhancements deferred from v1.2.0: zoom/pan, focus/highlight-neighbours, edge-flow
   animation, a severity legend.
-- Carried over: real license public key, marketplace PNG icon, the `dotenv-value-leak`
-  false-positive on long `UPPER_SNAKE` config constants, worker-based scanning for huge files.
+- Carried over: marketplace PNG icon, the `dotenv-value-leak` false-positive on long
+  `UPPER_SNAKE` config constants, worker-based scanning for huge files.

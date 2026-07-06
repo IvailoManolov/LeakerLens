@@ -39,10 +39,6 @@ flowchart TD
     main["main.ts → renders PanelState"]
   end
 
-  subgraph lic["src/license/"]
-    isPro["License.isPro()"]
-  end
-
   vscodeEvents["VS Code events\n(edit / open / activate)"] --> ctrl
   ctrl --> scan
   ctrl --> diag
@@ -53,7 +49,6 @@ flowchart TD
   ca --> rem
   panelHost --> rem
   cmd --> git
-  cmd --> isPro
   git --> hookRunner["dist/precommit.js\n(bundles engine)"]
 ```
 
@@ -149,10 +144,10 @@ flowchart LR
   scanText --> verdict{secrets found?}
   verdict -- no --> ok["exit 0 ✓"]
   verdict -- "yes · warn-only" --> warn["print + exit 0"]
-  verdict -- "yes · blocking (Pro)" --> block["print + exit 1 ✗"]
+  verdict -- "yes · blocking" --> block["print + exit 1 ✗"]
 ```
 
-Commit-blocking is gated by `License.isPro()`; without Pro the guard is warn-only.
+Commit-blocking is controlled by the `leaklens.commitBlocking` setting; when off, the guard is warn-only.
 
 ## 6. Performance budget (treated as law)
 

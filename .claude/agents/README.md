@@ -11,7 +11,7 @@ and a system-prompt body. Claude Code auto-discovers them; list them with `/agen
 | Agent | Role | Owns | Tools | Model |
 |-------|------|------|-------|-------|
 | [`planner`](planner.md) | Architect | Build sequencing + interface contracts; produces task breakdowns | read-only (`Read, Grep, Glob`) | opus |
-| [`backend-engineer`](backend-engineer.md) | Logic | `engine/`, `extension/` glue, `license/`, build tooling, webview **host** | edit + `Bash` | opus |
+| [`backend-engineer`](backend-engineer.md) | Logic | `engine/`, `extension/` glue, build tooling, webview **host** | edit + `Bash` | opus |
 | [`frontend-engineer`](frontend-engineer.md) | UI | **Only** the Tailwind panel webview (HTML/CSS/styling) | edit + `Bash` | sonnet |
 | [`test-engineer`](test-engineer.md) | Tests | All tests; 100% on `engine/`, smoke tests on glue, perf guards | edit + `Bash` | sonnet |
 
