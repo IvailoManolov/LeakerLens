@@ -22,17 +22,31 @@ export type EnvGitStatus = 'ignored' | 'exposed' | 'unknown';
  * never raises the exposed warning, so non-git projects are left alone.
  */
 export class EnvGitignoreClassifier {
-  private readonly ignoreCache = new Map<string, EnvGitStatus>();
+  /** Holds the in-flight promise while git answers, then the settled status. */
+  private readonly ignoreCache = new Map<string, EnvGitStatus | Promise<EnvGitStatus>>();
   private readonly trackedCache = new Map<string, boolean>();
 
-  async classify(fsPath: string): Promise<EnvGitStatus> {
+  classify(fsPath: string): Promise<EnvGitStatus> {
     const cached = this.ignoreCache.get(fsPath);
-    if (cached) {
-      return cached;
+    if (cached !== undefined) {
+      // Either a settled status or the in-flight promise — concurrent callers share one git
+      // spawn, so overlapping scans can't race each other's cache writes (last-writer-wins
+      // made the exposed count depend on child-process resolution order).
+      return Promise.resolve(cached);
     }
-    const status = await checkIgnore(fsPath);
-    this.ignoreCache.set(fsPath, status);
-    return status;
+    const pending = checkIgnore(fsPath).then((status) => {
+      if (status === 'unknown') {
+        // git itself failed (not on PATH, index.lock held, spawn pressure) — a transient
+        // answer. Caching it pinned the `.env` "safe"/uncounted for the whole session; drop
+        // it instead so the next scan retries.
+        this.ignoreCache.delete(fsPath);
+      } else {
+        this.ignoreCache.set(fsPath, status);
+      }
+      return status;
+    });
+    this.ignoreCache.set(fsPath, pending);
+    return pending;
   }
 
   /**

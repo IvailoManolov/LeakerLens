@@ -56,6 +56,14 @@ async function scanWorkspace(controller: ScanController, panel: PanelController)
         // dotenv variants explicitly and merge so they're always scanned.
         vscode.workspace.findFiles('**/{.env,.env.*,*.env}', SCAN_EXCLUDE, SCAN_LIMIT),
       ]);
+      // findFiles truncates to SCAN_LIMIT in enumeration order, which is not stable across
+      // runs — past the cap, each rescan would silently scan a different subset and the count
+      // would flip on an unchanged workspace. Say so instead of pretending the scan is total.
+      if (allFiles.length >= SCAN_LIMIT) {
+        void vscode.window.showWarningMessage(
+          `LeakLens: workspace exceeds ${SCAN_LIMIT} files — scan results may be incomplete. Add generated folders to .gitignore to narrow the scan.`,
+        );
+      }
       const seen = new Set<string>();
       // Honor each workspace folder's `.gitignore` for ordinary files so the editor scan matches
       // the headless CLI — `findFiles` only applies SCAN_EXCLUDE and never reads `.gitignore`,
@@ -79,6 +87,12 @@ async function scanWorkspace(controller: ScanController, panel: PanelController)
         }
       }
     });
+  } catch (err) {
+    // Without this, a failure after the scan's scope reset (e.g. findFiles rejecting) left an
+    // empty panel that read as "no secrets found" — with no toast and no error, the next click
+    // would flip back to the real count. Fail loudly instead of lying quietly.
+    void vscode.window.showErrorMessage(`LeakLens: workspace scan failed — ${(err as Error).message}`);
+    return;
   } finally {
     panel.setScanning(false);
   }

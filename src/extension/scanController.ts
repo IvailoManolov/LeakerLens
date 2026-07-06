@@ -10,6 +10,16 @@ import { isInScanScope } from './scanScope';
 /** How a scanned document relates to `.env` handling. */
 type EnvKind = 'none' | 'safe' | 'exposed';
 
+/**
+ * Whether a document close should drop its cached findings. Findings describe the file on
+ * disk, and VS Code closes background documents (e.g. those the workspace scan loaded) at its
+ * own pace — clearing on every close made the panel count silently decay between rescans. Only
+ * content that never reached disk (untitled, or dirty changes being discarded) goes stale.
+ */
+export function shouldClearOnClose(doc: vscode.TextDocument): boolean {
+  return doc.isUntitled || doc.isDirty;
+}
+
 interface DocResult {
   readonly findings: Finding[];
   /** `none` = ordinary file; `safe`/`exposed` = a `.env` file (gitignored or not). */
@@ -45,6 +55,8 @@ export class ScanController implements vscode.Disposable {
   readonly onDidUpdate = this.emitter.event;
   private config: LeakLensConfig;
   private inFlightScan: Promise<void> | undefined;
+  /** In-flight per-document scans, keyed by URI, for same-version coalescing. */
+  private readonly pendingScans = new Map<string, { version: number; promise: Promise<void> }>();
 
   constructor(private readonly decorations: Decorations) {
     this.config = readConfig();
@@ -164,6 +176,25 @@ export class ScanController implements vscode.Disposable {
     if (!this.shouldScan(doc)) {
       return Promise.resolve();
     }
+    // Coalesce same-version scans of the same document. The workspace scan's own
+    // openTextDocument fires onDidOpenTextDocument → scheduleScan(doc, 0), whose duplicate
+    // scan replaced the findings array and made applyEnvStatus's staleness check drop the
+    // awaited `exposed` classification — so an exposed `.env`'s secrets went uncounted.
+    const key = doc.uri.toString();
+    const pending = this.pendingScans.get(key);
+    if (pending && pending.version === doc.version) {
+      return pending.promise;
+    }
+    const promise = this.doScanNow(doc).finally(() => {
+      if (this.pendingScans.get(key)?.promise === promise) {
+        this.pendingScans.delete(key);
+      }
+    });
+    this.pendingScans.set(key, { version: doc.version, promise });
+    return promise;
+  }
+
+  private doScanNow(doc: vscode.TextDocument): Promise<void> {
     const findings = scanText(doc.getText(), { filename: doc.fileName });
     const inScope = isInScanScope(doc.uri);
 

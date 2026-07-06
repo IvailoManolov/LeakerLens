@@ -413,3 +413,104 @@ describe('Fix A — .env git classification', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rescan determinism — findings must not decay when VS Code closes documents
+//
+// The workspace scan loads every file via openTextDocument; VS Code garbage-closes those
+// background documents at an arbitrary later time. onDidCloseTextDocument must NOT erase
+// the findings — the file on disk still contains the secret, and clearing made the panel
+// count silently decay (8 → 0) between rescans on an unchanged workspace.
+// ---------------------------------------------------------------------------
+
+describe('Rescan determinism — results survive document close', () => {
+  it('keeps diagnostics when the editor tab closes (saved file, findings describe disk)', async function () {
+    const uri = tempFile('persist.ts', SECRET_LINE);
+    // Open via the editor ONLY — an extension-held openTextDocument reference would pin the
+    // document and VS Code would defer the close indefinitely, hiding the behavior under test.
+    await vscode.window.showTextDocument(uri);
+    try {
+      await waitFor(() => vscode.languages.getDiagnostics(uri).length > 0);
+    } catch {
+      throw new Error('diagnostics never appeared for the opened secret file');
+    }
+
+    // Event-driven close detection: VS Code disposes the underlying TextDocument on ITS own
+    // schedule after the tab closes. If it defers past the window, skip — the deterministic
+    // shouldClearOnClose test below still pins the contract.
+    const closed = new Promise<boolean>((resolve) => {
+      const sub = vscode.workspace.onDidCloseTextDocument((d) => {
+        if (d.uri.toString() === uri.toString()) {
+          sub.dispose();
+          resolve(true);
+        }
+      });
+      setTimeout(() => {
+        sub.dispose();
+        resolve(false);
+      }, 15000);
+    });
+    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    if (!(await closed)) {
+      this.skip();
+      return;
+    }
+
+    assert.ok(
+      vscode.languages.getDiagnostics(uri).length >= 1,
+      'diagnostics must survive the document close — the secret is still on disk',
+    );
+  });
+
+  it('shouldClearOnClose: keeps saved file docs, drops untitled/dirty ones', async () => {
+    const { shouldClearOnClose } = await import('../../../src/extension/scanController');
+
+    const saved = await vscode.workspace.openTextDocument(tempFile('saved.ts', SECRET_LINE));
+    assert.strictEqual(shouldClearOnClose(saved), false, 'saved file docs must be kept');
+
+    const untitled = await vscode.workspace.openTextDocument({ content: SECRET_LINE });
+    assert.strictEqual(shouldClearOnClose(untitled), true, 'untitled docs must be cleared');
+
+    const dirtyUri = tempFile('dirty.ts', SECRET_LINE);
+    const dirtyDoc = await vscode.workspace.openTextDocument(dirtyUri);
+    const edit = new vscode.WorkspaceEdit();
+    edit.insert(dirtyUri, new vscode.Position(0, 0), '// dirty\n');
+    await vscode.workspace.applyEdit(edit);
+    assert.strictEqual(dirtyDoc.isDirty, true, 'precondition: doc must be dirty');
+    assert.strictEqual(shouldClearOnClose(dirtyDoc), true, 'dirty docs must be cleared on close');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rescan determinism — concurrent scanNow calls for the same document coalesce
+//
+// The scan loop's own openTextDocument fires onDidOpenTextDocument → scheduleScan(doc, 0),
+// spawning a duplicate un-awaited scanNow that overwrote the findings array and made
+// applyEnvStatus's staleness check drop the awaited 'exposed' classification. Same-version
+// scans of the same document must share one promise.
+// ---------------------------------------------------------------------------
+
+describe('Rescan determinism — concurrent scanNow coalesces', () => {
+  it('returns the same promise for the same unchanged document', async () => {
+    // Import here (not top-level) so a compile failure surfaces in this test, not module load.
+    const { ScanController } = await import('../../../src/extension/scanController');
+    const controller = new ScanController({
+      normal: vscode.window.createTextEditorDecorationType({}),
+      envSafe: vscode.window.createTextEditorDecorationType({}),
+    });
+    try {
+      const uri = tempFile('dedup.ts', SECRET_LINE);
+      const doc = await vscode.workspace.openTextDocument(uri);
+      const p1 = controller.scanNow(doc);
+      const p2 = controller.scanNow(doc);
+      assert.strictEqual(
+        p1,
+        p2,
+        'two scanNow calls for the same doc+version must coalesce into one scan',
+      );
+      await Promise.all([p1, p2]);
+    } finally {
+      controller.dispose();
+    }
+  });
+});

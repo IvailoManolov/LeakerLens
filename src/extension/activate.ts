@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ScanController } from './scanController';
+import { ScanController, shouldClearOnClose } from './scanController';
 import { createGutterDecoration, createEnvSafeDecoration } from './decorations';
 import { LeakHoverProvider } from './hovers';
 import { LeakCodeActionProvider } from './codeActions';
@@ -46,7 +46,11 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.workspace.onDidChangeTextDocument((e) => controller.scheduleScan(e.document)),
     vscode.workspace.onDidOpenTextDocument((doc) => controller.scheduleScan(doc, 0)),
-    vscode.workspace.onDidCloseTextDocument((doc) => controller.clear(doc.uri)),
+    vscode.workspace.onDidCloseTextDocument((doc) => {
+      if (shouldClearOnClose(doc)) {
+        controller.clear(doc.uri);
+      }
+    }),
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
         controller.scheduleScan(editor.document, 0);

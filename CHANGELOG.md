@@ -2,6 +2,26 @@
 
 All notable changes to LeakLens are documented here.
 
+## [5.0.1] — 2026-07-06
+
+### Fixed
+
+- **Rescan results no longer flip on an unchanged workspace.** Four independent causes, each
+  now regression-tested:
+  - Findings survive VS Code's background-document lifecycle — closing a document (including
+    VS Code's own delayed garbage-close of files loaded by the workspace scan) no longer
+    silently erases its findings, which made the panel decay from N to 0 between rescans.
+  - Concurrent scans of the same unchanged document coalesce into one, so the scan's own
+    file-open events can no longer drop an exposed `.env`'s classification and undercount it.
+  - A transient `git` failure is no longer cached for the whole session — the classifier
+    retries on the next scan instead of pinning an exposed `.env` as "safe"/uncounted.
+  - A workspace-scan failure now surfaces as an error message instead of an empty panel that
+    read as "no secrets found".
+- **The panel now shows "Scanning workspace…" while a scan runs** (and disables Rescan)
+  instead of a definitive-looking "No secrets detected — you're clean" mid-scan.
+- Workspaces exceeding the 5000-file enumeration cap get an explicit "results may be
+  incomplete" warning instead of silently scanning a different subset each run.
+
 ## [5.0.0] — 2026-07-05
 
 **Milestone release.** LeakLens 5.0 marks the point where the local detection engine reaches

@@ -2,7 +2,7 @@
   "name": "leaklens",
   "displayName": "LeakLens",
   "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "publisher": "leaklens",
   "license": "SEE LICENSE IN LICENSE",
   "pricing": "Free",
@@ -117,7 +117,7 @@
     "watch": "node esbuild.mjs --watch",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "pretest:integration": "tsc -p ./tsconfig.test.json && node -e \"const fs=require('fs');fs.cpSync('test/integration/vscode-shim.js','out-test/test/integration/vscode-shim.js');fs.cpSync('test/integration/vscode-shim.cmd','out-test/test/integration/vscode-shim.cmd')\"",
+    "pretest:integration": "node -e \"require('fs').rmSync('out-test',{recursive:true,force:true})\" && tsc -p ./tsconfig.test.json && node -e \"const fs=require('fs');fs.cpSync('test/integration/vscode-shim.js','out-test/test/integration/vscode-shim.js');fs.cpSync('test/integration/vscode-shim.cmd','out-test/test/integration/vscode-shim.cmd')\"",
     "test:integration": "node ./out-test/test/integration/runTest.js",
     "package": "npm run build && vsce package --no-dependencies",
     "vscode:prepublish": "npm run build"

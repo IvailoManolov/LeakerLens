@@ -108,6 +108,7 @@ const readLoc = (el: HTMLElement): Locator => ({
 
 // ── header ──────────────────────────────────────────────────────────────────
 function headerHtml(): string {
+  const scanning = !!state?.scanning;
   const tab = (target: PanelView, label: string): string => {
     const active = view === target;
     const cls = active ? 'bg-active text-fg' : 'text-muted hover:bg-hover';
@@ -126,7 +127,7 @@ function headerHtml(): string {
           <div class="inline-flex rounded overflow-hidden border border-border">
             ${tab('list', 'List')}${tab('tree', 'Tree')}${tab('map', 'Map')}
           </div>
-          <button data-action="rescan" class="px-2 py-1 rounded bg-btnSecondary text-btnSecondaryFg hover:bg-hover">Rescan</button>
+          <button data-action="rescan" ${scanning ? 'disabled' : ''} class="px-2 py-1 rounded bg-btnSecondary text-btnSecondaryFg ${scanning ? 'opacity-60' : 'hover:bg-hover'}">${scanning ? 'Scanning…' : 'Rescan'}</button>
         </div>
       </div>
       ${search}
@@ -139,6 +140,17 @@ function emptyStateHtml(): string {
     <div class="flex flex-1 flex-col items-center justify-center gap-1 text-center px-4">
       <div class="text-ok text-lg">No secrets detected — you're clean ✓</div>
       <div class="text-muted">LeakLens watches your files locally as you type.</div>
+    </div>`;
+}
+
+// A scan resets the scope tags and re-fills them file by file, so mid-scan states are empty
+// or partial. Without this, the panel showed a definitive-looking "you're clean" during the
+// scan — users read a still-scanning panel as an inconsistent result.
+function scanningStateHtml(): string {
+  return `
+    <div class="flex flex-1 flex-col items-center justify-center gap-1 text-center px-4">
+      <div class="text-muted text-lg">Scanning workspace…</div>
+      <div class="text-muted">Results appear as files are checked.</div>
     </div>`;
 }
 
@@ -322,7 +334,7 @@ function bodyHtml(): string {
     return '';
   }
   if (state.isEmpty) {
-    return emptyStateHtml();
+    return state.scanning ? scanningStateHtml() : emptyStateHtml();
   }
   if (view === 'map') {
     // Stable mount host; the canvas controller owns everything inside it (see secretMap.ts).
