@@ -3,7 +3,7 @@
   "displayName": "LeakLens",
   "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
   "version": "5.0.2",
-  "publisher": "leaklens",
+  "publisher": "Manolov",
   "license": "SEE LICENSE IN LICENSE",
   "pricing": "Free",
   "repository": {
