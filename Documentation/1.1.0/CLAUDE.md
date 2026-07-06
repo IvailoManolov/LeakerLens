@@ -1,4 +1,4 @@
-# LeakLens v1.1.0 — Project Summary
+# LeakerLens v1.1.0 — Project Summary
 
 > Point-in-time summary at version **1.1.0**. Builds on
 > [v1.0.0](../1.0.0/CLAUDE.md); this doc covers what changed. See
@@ -20,7 +20,7 @@ Secret (key)  →  File  →  Line:Col
   the masked preview travel to the webview.
 - **Search box** filters secrets by rule, masked preview, or file path.
 - **Click a line → jump** to it (reuses the v1.0 jump id format).
-- `LeakLens: Show Secret Graph` command runs a workspace scan, reveals the panel, and
+- `LeakerLens: Show Secret Graph` command runs a workspace scan, reveals the panel, and
   switches to the tree.
 
 ## Performance
@@ -39,7 +39,7 @@ Secret (key)  →  File  →  Line:Col
 | [src/engine/scan.ts](../../src/engine/scan.ts) | Sets `fingerprint` on each finding. |
 | [src/extension/panel/protocol.ts](../../src/extension/panel/protocol.ts) | `PanelView`, `Tree*` types, `PanelState.tree`, `HostToPanel.setView`. |
 | [src/extension/panel/panelController.ts](../../src/extension/panel/panelController.ts) | `buildTree()` (O(F) grouping) + `setView()`. |
-| [src/extension/commands.ts](../../src/extension/commands.ts) | `leaklens.showSecretGraph` command. |
+| [src/extension/commands.ts](../../src/extension/commands.ts) | `leakerlens.showSecretGraph` command. |
 | [src/webview/main.ts](../../src/webview/main.ts) | List/Tree toggle, lazy collapsible tree, search, persisted view/expand state. |
 
 ## Quality status (1.1.0)

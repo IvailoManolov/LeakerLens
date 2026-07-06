@@ -57,7 +57,7 @@ const CLEAN_SOURCE = `export function add(a: number, b: number): number {\n  ret
 let tmpRoot: string;
 
 beforeAll(() => {
-  tmpRoot = mkdtempSync(join(tmpdir(), 'leaklens-mcp-test-'));
+  tmpRoot = mkdtempSync(join(tmpdir(), 'leakerlens-mcp-test-'));
 });
 
 afterAll(() => {
@@ -708,11 +708,11 @@ describe('MCP tool callback shaping (ok/fail paths)', () => {
       thrown = (e as Error).message;
     }
     const failResult = {
-      content: [{ type: 'text' as const, text: `LeakLens: ${thrown}` }],
+      content: [{ type: 'text' as const, text: `LeakerLens: ${thrown}` }],
       isError: true as const,
     };
     expect(failResult.isError).toBe(true);
-    expect(failResult.content[0].text).toContain('LeakLens:');
+    expect(failResult.content[0].text).toContain('LeakerLens:');
     expect(failResult.content[0].text).toContain('nope.ts');
   });
 });
@@ -759,7 +759,7 @@ describe('edge cases', () => {
 
   it('PRIVACY INVARIANT: Stripe key raw value absent from result', () => {
     // Assembled at runtime so the literal never trips secret push-protection,
-    // while LeakLens still sees the reconstructed sk_live_ key in the scanned text.
+    // while LeakerLens still sees the reconstructed sk_live_ key in the scanned text.
     const STRIPE_KEY = ['sk', 'live', '4eC39HqLyjWDarjtT1zdp7dc'].join('_');
     const result = handleScanText({
       text: `const stripe = "${STRIPE_KEY}";\n`,

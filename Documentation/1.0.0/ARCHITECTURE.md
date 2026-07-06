@@ -1,11 +1,11 @@
-# LeakLens v1.0.0 — Architecture
+# LeakerLens v1.0.0 — Architecture
 
-Human-readable guide to how LeakLens works, with diagrams. For the rule catalogue see
+Human-readable guide to how LeakerLens works, with diagrams. For the rule catalogue see
 [RULES.md](RULES.md); for a high-level status snapshot see [CLAUDE.md](CLAUDE.md).
 
 ## 1. The big picture
 
-LeakLens is split into a **pure engine** (no VS Code, fully testable) and a thin **VS Code
+LeakerLens is split into a **pure engine** (no VS Code, fully testable) and a thin **VS Code
 glue** layer. The engine is the moat: it's deterministic, synchronous, and reusable (the
 git hook runs the very same engine outside the editor).
 
@@ -94,7 +94,7 @@ flowchart LR
   F -- no --> C
   F -- yes --> G["build Finding (mask preview)"]
   G --> H["dedupe overlaps\n(most-severe wins)"]
-  H --> I["drop lines with\nleaklens:ignore"]
+  H --> I["drop lines with\nleakerlens:ignore"]
   I --> J["Finding[]"]
 ```
 
@@ -131,14 +131,14 @@ Code APIs and `ThemeColor`, not Tailwind.
 
 ## 5. The git pre-commit guard
 
-Opt-in and entirely local. On install, LeakLens copies the bundled `dist/precommit.js`
-into `.git/hooks/leaklens-precommit.cjs` and writes a `pre-commit` shell that runs it. The
+Opt-in and entirely local. On install, LeakerLens copies the bundled `dist/precommit.js`
+into `.git/hooks/leakerlens-precommit.cjs` and writes a `pre-commit` shell that runs it. The
 runner reads **staged** blobs via `git` and scans them with the same engine.
 
 ```mermaid
 flowchart LR
   commit["git commit"] --> hook[".git/hooks/pre-commit"]
-  hook --> runner["leaklens-precommit.cjs\n(bundled engine)"]
+  hook --> runner["leakerlens-precommit.cjs\n(bundled engine)"]
   runner --> staged["git diff --cached\n+ git show :file"]
   staged --> scanText
   scanText --> verdict{secrets found?}
@@ -147,7 +147,7 @@ flowchart LR
   verdict -- "yes · blocking" --> block["print + exit 1 ✗"]
 ```
 
-Commit-blocking is controlled by the `leaklens.commitBlocking` setting; when off, the guard is warn-only.
+Commit-blocking is controlled by the `leakerlens.commitBlocking` setting; when off, the guard is warn-only.
 
 ## 6. Performance budget (treated as law)
 

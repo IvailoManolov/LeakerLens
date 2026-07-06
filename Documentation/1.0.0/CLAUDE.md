@@ -1,10 +1,10 @@
-# LeakLens v1.0.0 — Project Summary
+# LeakerLens v1.0.0 — Project Summary
 
 > A point-in-time summary of what exists at version **1.0.0**. Read this first to
 > understand the codebase before diving into [ARCHITECTURE.md](ARCHITECTURE.md) or
 > [RULES.md](RULES.md).
 
-## What LeakLens is
+## What LeakerLens is
 
 A VS Code extension that detects API keys, tokens, passwords, and `.env` secrets **as you
 type and before you commit**, with **100% of analysis running locally**. No network calls
@@ -16,13 +16,13 @@ in the detection path, no telemetry, no backend.
 |---|---|
 | Pure detection engine (`scanText`) | ✅ Complete, **100% test coverage** |
 | Headline ruleset (11 rules) | ✅ AWS, GCP, GitHub, Stripe, OpenAI, Anthropic, Slack, JWT, PEM keys, generic high-entropy, `.env` leaks |
-| False-positive gating | ✅ entropy floors, placeholder allowlist, example/test-file context, inline `leaklens:ignore` |
+| False-positive gating | ✅ entropy floors, placeholder allowlist, example/test-file context, inline `leakerlens:ignore` |
 | Inline detection UI | ✅ diagnostics (squiggles), overview-ruler marks, teaching hovers |
 | Remediations | ✅ Ignore here / Mask value / Move to `.env` (quick-fix + hover + panel) |
 | Findings panel (Tailwind webview) | ✅ severity groups, click-to-jump, inline actions, reassuring empty state |
 | Workspace scan command | ✅ |
-| Git pre-commit guard | ✅ opt-in; warn-only, or blocking via the `leaklens.commitBlocking` setting |
-| Build & packaging | ✅ esbuild bundles + Tailwind CLI + `vsce` → `leaklens-1.0.0.vsix` |
+| Git pre-commit guard | ✅ opt-in; warn-only, or blocking via the `leakerlens.commitBlocking` setting |
+| Build & packaging | ✅ esbuild bundles + Tailwind CLI + `vsce` → `leakerlens-1.0.0.vsix` |
 
 ## Code map
 

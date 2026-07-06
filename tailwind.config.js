@@ -1,5 +1,5 @@
 /**
- * Tailwind config for the LeakLens findings panel webview.
+ * Tailwind config for the LeakerLens findings panel webview.
  *
  * Every color maps to a VS Code theme CSS variable so the panel is automatically
  * correct in light, dark, and high-contrast themes — we never hardcode colors.

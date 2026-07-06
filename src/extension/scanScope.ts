@@ -26,7 +26,7 @@ export function isInScanScope(uri: vscode.Uri): boolean {
  * NEVER reads `.gitignore`, which otherwise surfaces secrets in gitignored, generated files
  * (build/test output) the user doesn't consider real leaks. Reuses the CLI's
  * {@link buildIgnore}/{@link isIgnored} (rooted at each workspace folder's `.gitignore` plus the
- * shared {@link EXCLUDED_DIRS}) so the editor scan and `leaklens scan` ignore the exact same files.
+ * shared {@link EXCLUDED_DIRS}) so the editor scan and `leakerlens scan` ignore the exact same files.
  *
  * One matcher per workspace folder, cached for the call. Files outside any workspace folder are
  * kept — we have no `.gitignore` root for them. Callers pass `.env` variants through a SEPARATE,

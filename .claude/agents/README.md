@@ -1,6 +1,6 @@
-# LeakLens build team — subagents
+# LeakerLens build team — subagents
 
-This directory defines the **Claude Code subagent team** that builds **LeakLens**, the local-only
+This directory defines the **Claude Code subagent team** that builds **LeakerLens**, the local-only
 secret-leak guard for VS Code described in [`../../vscode-extension-leaker.md`](../../vscode-extension-leaker.md).
 
 Each agent is a single markdown file with YAML frontmatter (`name`, `description`, `tools`, `model`)

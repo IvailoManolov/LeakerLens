@@ -1,4 +1,4 @@
-# LeakLens v1.2.0 — Project Summary
+# LeakerLens v1.2.0 — Project Summary
 
 > Point-in-time summary at version **1.2.0**. Builds on
 > [v1.1.0](../1.1.0/CLAUDE.md) (the Secret Graph) and [v1.0.0](../1.0.0/CLAUDE.md); this doc
@@ -21,7 +21,7 @@ of the Tree:
   shared node** — its higher degree makes "this file holds multiple secrets" obvious.
 - **Interactive:** drag to reposition, hover for a themed tooltip (rule / masked preview /
   counts), click a node to **jump** to the source (reuses the v1.0 `jumpTo` channel).
-- **`LeakLens: Show Secret Graph` now opens the Map.** The Tree is retained (its search box
+- **`LeakerLens: Show Secret Graph` now opens the Map.** The Tree is retained (its search box
   and DOM list remain the accessible, searchable equivalent).
 - **Privacy preserved:** like the Tree, only the **masked preview + fingerprint + counts**
   reach the webview — the raw secret never does.

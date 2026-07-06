@@ -17,25 +17,25 @@ async function waitFor(predicate: () => boolean, timeoutMs: number): Promise<voi
 }
 
 function tempFile(name: string, content: string): vscode.Uri {
-  const dir = mkdtempSync(path.join(tmpdir(), 'leaklens-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'leakerlens-'));
   const file = path.join(dir, name);
   writeFileSync(file, content, 'utf8');
   return vscode.Uri.file(file);
 }
 
-describe('LeakLens integration smoke', () => {
+describe('LeakerLens integration smoke', () => {
   it('activates and registers its commands', async () => {
-    const ext = vscode.extensions.getExtension('leaklens.leaklens');
+    const ext = vscode.extensions.getExtension('Manolov.leakerlens');
     assert.ok(ext, 'extension is installed');
     await ext.activate();
     const commands = await vscode.commands.getCommands(true);
-    assert.ok(commands.includes('leaklens.scanWorkspace'), 'scanWorkspace registered');
-    assert.ok(commands.includes('leaklens.applyRemediation'), 'applyRemediation registered');
-    assert.ok(commands.includes('leaklens.showSecretGraph'), 'showSecretGraph registered');
+    assert.ok(commands.includes('leakerlens.scanWorkspace'), 'scanWorkspace registered');
+    assert.ok(commands.includes('leakerlens.applyRemediation'), 'applyRemediation registered');
+    assert.ok(commands.includes('leakerlens.showSecretGraph'), 'showSecretGraph registered');
   });
 
   it('runs the Secret Graph command without throwing', async () => {
-    await vscode.commands.executeCommand('leaklens.showSecretGraph');
+    await vscode.commands.executeCommand('leakerlens.showSecretGraph');
   });
 
   it('raises a diagnostic for a real secret in a file', async () => {
@@ -46,7 +46,7 @@ describe('LeakLens integration smoke', () => {
 
     const diagnostics = vscode.languages.getDiagnostics(uri);
     assert.ok(diagnostics.length >= 1, 'a diagnostic was produced');
-    assert.strictEqual(diagnostics[0].source, 'LeakLens');
+    assert.strictEqual(diagnostics[0].source, 'LeakerLens');
     assert.strictEqual(diagnostics[0].code, 'aws-access-key-id');
   });
 
@@ -63,6 +63,6 @@ describe('LeakLens integration smoke', () => {
       range,
     );
     assert.ok(actions && actions.length >= 1, 'at least one quick-fix offered');
-    assert.ok(actions.some((a) => a.title.startsWith('LeakLens:')), 'a LeakLens fix is present');
+    assert.ok(actions.some((a) => a.title.startsWith('LeakerLens:')), 'a LeakerLens fix is present');
   });
 });

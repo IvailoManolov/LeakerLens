@@ -11,7 +11,7 @@ export interface RemediationArg {
   readonly kind: RemediationKind;
 }
 
-const ENV_VAR_NAME = 'LEAKLENS_SECRET';
+const ENV_VAR_NAME = 'LEAKERLENS_SECRET';
 
 /**
  * Apply a remediation. All three mutate the file — only ever invoked by an explicit
@@ -34,7 +34,7 @@ export async function applyRemediation(arg: RemediationArg, controller: ScanCont
     controller.scheduleScan(doc, 0);
   } catch (err) {
     // Never fail silently — surface why the action didn't apply.
-    void vscode.window.showErrorMessage(`LeakLens: couldn't apply "${arg.kind}" — ${(err as Error).message}`);
+    void vscode.window.showErrorMessage(`LeakerLens: couldn't apply "${arg.kind}" — ${(err as Error).message}`);
   }
 }
 
@@ -42,7 +42,7 @@ export async function applyRemediation(arg: RemediationArg, controller: ScanCont
 async function applyIgnore(uri: vscode.Uri, doc: vscode.TextDocument, line: number): Promise<void> {
   const edit = new vscode.WorkspaceEdit();
   const eol = new vscode.Position(line, doc.lineAt(line).text.length);
-  edit.insert(uri, eol, ' // leaklens:ignore');
+  edit.insert(uri, eol, ' // leakerlens:ignore');
   await vscode.workspace.applyEdit(edit);
 }
 
@@ -73,7 +73,7 @@ async function applyMoveToEnv(uri: vscode.Uri, doc: vscode.TextDocument, range: 
   const edit = new vscode.WorkspaceEdit();
   edit.replace(uri, range, `process.env.${varName}`);
   await vscode.workspace.applyEdit(edit);
-  void vscode.window.showInformationMessage(`LeakLens: moved secret to .env as ${varName}.`);
+  void vscode.window.showInformationMessage(`LeakerLens: moved secret to .env as ${varName}.`);
 }
 
 /** Pick an env var name that isn't already defined in the `.env` contents. */

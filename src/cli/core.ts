@@ -1,5 +1,5 @@
 /**
- * Exported pure-ish core of the headless `leaklens` CLI.  Every function here is
+ * Exported pure-ish core of the headless `leakerlens` CLI.  Every function here is
  * importable by unit tests without spawning a subprocess and without touching
  * `process.exit` / `process.argv`.  The thin entry-point (`index.ts`) wires these
  * together with `process.stdin`, `process.cwd()`, and `process.exit`.
@@ -27,13 +27,13 @@ export const EXIT_USAGE = 2;
 // Help text
 // ---------------------------------------------------------------------------
 
-export const USAGE = `leaklens — local secret scanner (no network, no telemetry)
+export const USAGE = `leakerlens — local secret scanner (no network, no telemetry)
 
 Usage:
-  leaklens scan [paths...]        Scan files/dirs (default: current directory)
-  leaklens scan --stdin --filename <name>
+  leakerlens scan [paths...]        Scan files/dirs (default: current directory)
+  leakerlens scan --stdin --filename <name>
                                   Scan stdin as <name>
-  leaklens mcp                    Start the local stdio MCP server (for AI agents)
+  leakerlens mcp                    Start the local stdio MCP server (for AI agents)
 
 Options:
   --json                          Machine output: { findings, summary } to stdout
@@ -366,7 +366,7 @@ export function sarifLevel(severity: Severity): 'error' | 'warning' | 'note' {
 }
 
 /**
- * Build a valid SARIF 2.1.0 log: one run, driver "LeakLens", `tool.driver.rules[]`,
+ * Build a valid SARIF 2.1.0 log: one run, driver "LeakerLens", `tool.driver.rules[]`,
  * and one result per finding.
  */
 export function renderSarif(located: readonly LocatedFinding[]): string {
@@ -406,8 +406,8 @@ export function renderSarif(located: readonly LocatedFinding[]): string {
       {
         tool: {
           driver: {
-            name: 'LeakLens',
-            informationUri: 'https://github.com/leaklens/leaklens',
+            name: 'LeakerLens',
+            informationUri: 'https://github.com/leakerlens/leakerlens',
             rules,
           },
         },
@@ -433,7 +433,7 @@ export function renderTextLines(located: readonly LocatedFinding[]): string | nu
       `  ${finding.severity.toUpperCase().padEnd(8)} ${finding.ruleName} — ${file}:${finding.line + 1}:${finding.column + 1}  ${finding.matchPreview}`,
     );
   }
-  lines.push(`\nLeakLens: ${located.length} potential secret(s) found.`);
+  lines.push(`\nLeakerLens: ${located.length} potential secret(s) found.`);
   return lines.join('\n');
 }
 
@@ -463,7 +463,7 @@ export function runScanCore(
     return {
       exitCode: EXIT_USAGE,
       stdout: '',
-      stderr: `leaklens: ${(e as Error).message}\n\n${USAGE}`,
+      stderr: `leakerlens: ${(e as Error).message}\n\n${USAGE}`,
     };
   }
 
@@ -476,7 +476,7 @@ export function runScanCore(
     return {
       exitCode: EXIT_USAGE,
       stdout: '',
-      stderr: `leaklens: ${(e as Error).message}\n`,
+      stderr: `leakerlens: ${(e as Error).message}\n`,
     };
   }
 
@@ -490,7 +490,7 @@ export function runScanCore(
   } else {
     const lines = renderTextLines(located);
     if (lines === null) {
-      stderr = 'LeakLens: no secrets found.\n';
+      stderr = 'LeakerLens: no secrets found.\n';
     } else {
       stderr = lines + '\n';
     }
@@ -528,6 +528,6 @@ export function mainCore(
   return {
     exitCode: EXIT_USAGE,
     stdout: '',
-    stderr: `leaklens: unknown command '${command}'\n\n${USAGE}`,
+    stderr: `leakerlens: unknown command '${command}'\n\n${USAGE}`,
   };
 }

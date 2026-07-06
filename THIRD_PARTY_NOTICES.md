@@ -2,12 +2,12 @@
 
 ## Pattern attribution — gitleaks
 
-LeakLens' detection patterns (`src/engine/rules/catalog/*.ts` in the source tree) are
+LeakerLens' detection patterns (`src/engine/rules/catalog/*.ts` in the source tree) are
 **adapted from [gitleaks](https://github.com/gitleaks/gitleaks)** (`config/gitleaks.toml`),
 which is distributed under the MIT License. We translated the Go RE2 patterns to JavaScript
 global regular expressions (adjusting for lookbehind/possessive quantifiers, `\h`, and
 Unicode `\p{}` classes that RE2 and JS treat differently) and re-tuned severities, keyword
-gates, entropy floors, and false-positive gating to match LeakLens' conservative,
+gates, entropy floors, and false-positive gating to match LeakerLens' conservative,
 precision-first posture. Any errors in translation are ours, not gitleaks'.
 
 We gratefully credit the **Gitleaks authors** for the underlying pattern research.

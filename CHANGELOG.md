@@ -1,11 +1,13 @@
 # Changelog
 
-All notable changes to LeakLens are documented here.
+All notable changes to LeakerLens are documented here.
 
 ## [5.0.2] — 2026-07-06
 
-Maintenance re-package. No functional or detection-behavior changes since 5.0.1 — same
-engine, rules, and fixes; version bump only.
+**Renamed to LeakerLens.** The extension is now published as **LeakerLens** (`Manolov.leakerlens`).
+This renames the display name, the `leakerlens` CLI command, the MCP server, the `leakerlens.*`
+settings keys, the command IDs, and the `leakerlens:ignore` inline directive. **No detection-behavior
+changes** since 5.0.1 — the engine, rules, and fixes are unchanged; this is a branding rename only.
 
 ## [5.0.1] — 2026-07-06
 
@@ -29,20 +31,20 @@ engine, rules, and fixes; version bump only.
 
 ## [5.0.0] — 2026-07-05
 
-**Milestone release.** LeakLens 5.0 marks the point where the local detection engine reaches
+**Milestone release.** LeakerLens 5.0 marks the point where the local detection engine reaches
 all the way around your workflow — **as you type** (diagnostics, hovers, one-click fixes), **on
 demand** (Scan Workspace + the List · Tree · Map Findings panel), **in the terminal and CI**
-(the headless `leaklens` CLI with `--json` / `--sarif` and gate-able exit codes), **inside your
-AI coding agents** (the `leaklens mcp` stdio server + one-step `Set up agent guardrails`), and
+(the headless `leakerlens` CLI with `--json` / `--sarif` and gate-able exit codes), **inside your
+AI coding agents** (the `leakerlens mcp` stdio server + one-step `Set up agent guardrails`), and
 **before you commit** (the opt-in pre-commit guard). All of it runs **100% locally** across
 **46 precision-first detectors** — nothing ever leaves your machine.
 
 ### Changed
 
-- **LeakLens is now completely free.** The Pro tier is gone: commit-blocking
-  (`leaklens.commitBlocking`) works for everyone with no license key, and the
-  `LeakLens: Activate Pro License` command and offline license gate have been removed.
-  LeakLens now makes **zero** network requests — there is no longer even a license check.
+- **LeakerLens is now completely free.** The Pro tier is gone: commit-blocking
+  (`leakerlens.commitBlocking`) works for everyone with no license key, and the
+  `LeakerLens: Activate Pro License` command and offline license gate have been removed.
+  LeakerLens now makes **zero** network requests — there is no longer even a license check.
 - **Refreshed brand + store presentation.** A new, higher-fidelity marketplace icon (gradient
   brand tile, gradient lens, glass highlight, crisp keyhole — authored as a scalable SVG and
   exported to a 256×256 PNG) and a polished Marketplace/README presentation page.
@@ -64,7 +66,7 @@ AI coding agents** (the `leaklens mcp` stdio server + one-step `Set up agent gua
 - **Workspace scan now honors `.gitignore`.** `Scan Workspace` previously reported secrets in
   gitignored, generated directories (e.g. `.next/`, `.terraform/`, custom `reports/`) that the
   hardcoded exclude list didn't cover — `vscode.workspace.findFiles` never reads `.gitignore`, so
-  these surfaced as "phantom" leaks the headless `leaklens` CLI already skipped. The scan now
+  these surfaced as "phantom" leaks the headless `leakerlens` CLI already skipped. The scan now
   filters its file list through each workspace folder's `.gitignore`, reusing the CLI's own ignore
   logic for guaranteed parity. Gitignored `.env` files are still scanned and rendered green/"safe".
 
@@ -97,18 +99,18 @@ AI coding agents** (the `leaklens mcp` stdio server + one-step `Set up agent gua
 
 ### Added — Agent-friendly surfaces
 
-LeakLens is now usable by AI coding agents and CI, not just the editor GUI. The pure
+LeakerLens is now usable by AI coding agents and CI, not just the editor GUI. The pure
 detection engine is exposed through three headless surfaces — everything stays local, and
 each surface only ever emits a masked preview + fingerprint, never the raw secret.
 
-- **`leaklens` CLI** — `leaklens scan [globs…]` (and `--stdin`) with human, **`--json`**, and
+- **`leakerlens` CLI** — `leakerlens scan [globs…]` (and `--stdin`) with human, **`--json`**, and
   **`--sarif`** output plus gate-able exit codes (`0` clean / `1` findings / `2` usage) for CI
   and agent loops. `.gitignore`-aware, honors the `.env` policy, and emits findings in a
   deterministic order so runs and diffs are stable.
-- **MCP server** — `leaklens mcp` starts a stdio server exposing `scan_text`, `scan_file`, and
+- **MCP server** — `leakerlens mcp` starts a stdio server exposing `scan_text`, `scan_file`, and
   `scan_workspace`, so an agent can scan code *before* it writes it or audit the workspace on
   demand. The SDK is bundled into its own `dist/mcp.js`, off the hot scan path.
-- **`LeakLens: Set up agent guardrails`** command — one step wires the MCP server into your
+- **`LeakerLens: Set up agent guardrails`** command — one step wires the MCP server into your
   agents (Claude Code `.mcp.json`, VS Code `.vscode/mcp.json`, Cursor `.cursor/mcp.json`),
   merges an instruction block into `AGENTS.md`, and offers to install the pre-commit guard.
   Config merges are idempotent, and the runners are copied into the extension's global storage
@@ -147,7 +149,7 @@ each surface only ever emits a masked preview + fingerprint, never the raw secre
   click to jump to the source. Rendered locally on a `<canvas>` with **zero new dependencies**
   and **nothing leaving the webview** — only the masked preview + fingerprint, never a raw
   secret.
-- `LeakLens: Show Secret Graph` now opens the Map.
+- `LeakerLens: Show Secret Graph` now opens the Map.
 
 ### Performance
 
@@ -179,7 +181,7 @@ each surface only ever emits a masked preview + fingerprint, never the raw secre
 
 ### Added (diagnostics)
 
-- A **"LeakLens" Output channel** logging panel lifecycle and every webview↔host message,
+- A **"LeakerLens" Output channel** logging panel lifecycle and every webview↔host message,
   to pinpoint any interaction issue without developer tools. (Verbose logging is temporary.)
 
 ### Added
@@ -187,7 +189,7 @@ each surface only ever emits a masked preview + fingerprint, never the raw secre
 - **Secret Graph** — a collapsible tree view (toggle in the Findings panel) that clusters
   findings by the unique secret value and shows every file and line it's referenced from
   (`Secret → File → Line`), with reference/file counts and click-to-jump.
-- `LeakLens: Show Secret Graph` command.
+- `LeakerLens: Show Secret Graph` command.
 - Engine `fingerprint` on each finding (non-reversible hash of the raw value) so identical
   secrets cluster — the raw secret never reaches the UI.
 - Tree search box; List ↔ Tree toggle and search are instant (client-side, no round-trip).

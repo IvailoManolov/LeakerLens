@@ -1,5 +1,5 @@
 /**
- * LeakLens detection contract.
+ * LeakerLens detection contract.
  *
  * These types are the stable interface between the pure `engine/` and the VS Code
  * `extension/` glue. The engine produces {@link Finding}s; the extension renders them.

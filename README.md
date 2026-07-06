@@ -1,17 +1,17 @@
-# LeakLens — catch secrets before they leak
+# LeakerLens — catch secrets before they leak
 
-**LeakLens** finds API keys, tokens, passwords, and `.env` secrets **as you type and
+**LeakerLens** finds API keys, tokens, passwords, and `.env` secrets **as you type and
 before you commit** — with **100% of analysis running locally**. Nothing ever leaves your
 machine. No account, no cloud, no telemetry of your code.
 
 > **Completely free · local-only · 46 precision-first detectors · catches secrets as you type, in CI, and inside your AI coding agents · zero telemetry.**
 
-LeakLens reaches around your whole workflow from one local engine — **in the editor** (squiggles,
+LeakerLens reaches around your whole workflow from one local engine — **in the editor** (squiggles,
 hovers, one-click fixes), **on demand** (Scan Workspace + a List · Tree · Map Findings panel),
-**in the terminal and CI** (the `leaklens` CLI with JSON/SARIF output), **inside your AI agents**
-(an `leaklens mcp` server), and **before you commit** (an opt-in git guard).
+**in the terminal and CI** (the `leakerlens` CLI with JSON/SARIF output), **inside your AI agents**
+(an `leakerlens mcp` server), and **before you commit** (an opt-in git guard).
 
-## Why LeakLens
+## Why LeakerLens
 
 - **Local-only, always.** Detection never makes a network call. Your code and findings
   stay on your machine — that's the whole point.
@@ -33,7 +33,7 @@ hovers, one-click fixes), **on demand** (Scan Workspace + a List · Tree · Map 
   click to jump.
 - **Scan Workspace** command for an on-demand sweep.
 - Opt-in **git pre-commit guard** that warns on staged secrets — or blocks the commit, if
-  you turn on the `leaklens.commitBlocking` setting.
+  you turn on the `leakerlens.commitBlocking` setting.
 
 ## Detected secret types
 
@@ -58,34 +58,34 @@ signal stays high.
 
 | Command | What it does |
 |---|---|
-| `LeakLens: Scan Workspace for Secrets` | Sweep the whole workspace |
-| `LeakLens: Show Findings Panel` | Reveal the panel |
-| `LeakLens: Show Secret Graph` | Open the animated map of where each secret is referenced |
-| `LeakLens: Set up agent guardrails` | Wire the scanner into your AI agents (MCP + `AGENTS.md` + git hook) |
-| `LeakLens: Install Pre-commit Guard` | Add the opt-in git hook to this repo |
-| `LeakLens: Remove Pre-commit Guard` | Remove it |
+| `LeakerLens: Scan Workspace for Secrets` | Sweep the whole workspace |
+| `LeakerLens: Show Findings Panel` | Reveal the panel |
+| `LeakerLens: Show Secret Graph` | Open the animated map of where each secret is referenced |
+| `LeakerLens: Set up agent guardrails` | Wire the scanner into your AI agents (MCP + `AGENTS.md` + git hook) |
+| `LeakerLens: Install Pre-commit Guard` | Add the opt-in git hook to this repo |
+| `LeakerLens: Remove Pre-commit Guard` | Remove it |
 
 ## Completely free
 
-Everything in LeakLens — real-time detection, all 46 detectors, one-click fixes, the
+Everything in LeakerLens — real-time detection, all 46 detectors, one-click fixes, the
 Findings panel, the Secret Graph, the CLI, the MCP server, and the commit-blocking
 pre-commit guard — is **free**. No account, no license key, no upsell.
 
 ## Privacy
 
-LeakLens performs **no network requests** and collects **no telemetry** of your code,
+LeakerLens performs **no network requests** and collects **no telemetry** of your code,
 secrets, or findings. Detection, the CLI, and the MCP server all run entirely on your
 machine.
 
 ## Inline ignore
 
-Add `leaklens:ignore` anywhere on a line (e.g. `// leaklens:ignore`) to suppress findings
+Add `leakerlens:ignore` anywhere on a line (e.g. `// leakerlens:ignore`) to suppress findings
 on that line. The **Ignore here** quick-fix does this for you.
 
 ## Command-line scanner
 
-LeakLens bundles a headless CLI, so the same engine runs in your terminal and in CI.
-Run **`LeakLens: Set up agent guardrails`** once and it provisions a stable copy of the CLI
+LeakerLens bundles a headless CLI, so the same engine runs in your terminal and in CI.
+Run **`LeakerLens: Set up agent guardrails`** once and it provisions a stable copy of the CLI
 (surviving extension updates) and writes the exact, ready-to-copy invocation into your
 project's `AGENTS.md`:
 
@@ -101,18 +101,18 @@ masked previews — never the raw secret.
 
 ## MCP server (for AI coding agents)
 
-LeakLens bundles a local **MCP server** so AI coding agents — Claude Code, Cursor, VS Code
+LeakerLens bundles a local **MCP server** so AI coding agents — Claude Code, Cursor, VS Code
 agent mode — can call the detection engine directly instead of parsing CLI text. It runs
 over stdio, entirely on your machine, with **no network calls**.
 
-You don't configure it by hand: run **`LeakLens: Set up agent guardrails`** and LeakLens
+You don't configure it by hand: run **`LeakerLens: Set up agent guardrails`** and LeakerLens
 registers itself with the agents you pick, writing an entry like this into their MCP config
 (`.mcp.json`, `.vscode/mcp.json`, or `.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "leaklens": {
+    "leakerlens": {
       "command": "node",
       "args": ["<path-to-provisioned-mcp-server>"]
     }
@@ -135,14 +135,14 @@ never returned, not even for `scan_text` where the agent supplied the text.
 
 ### One-step setup
 
-Run **`LeakLens: Set up agent guardrails`** from the command palette and LeakLens wires itself
+Run **`LeakerLens: Set up agent guardrails`** from the command palette and LeakerLens wires itself
 into your agents for you: it registers the MCP server (Claude Code, Cursor, VS Code), drops a
 short instruction block into `AGENTS.md`, and offers to install the pre-commit guard — no manual
 config editing.
 
 ## License
 
-LeakLens is **completely free** to install and use. The code is proprietary (no
+LeakerLens is **completely free** to install and use. The code is proprietary (no
 redistribution) — see [LICENSE](LICENSE). Detection patterns adapted from
 [gitleaks](https://github.com/gitleaks/gitleaks) (MIT) are credited in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which ships with the extension.

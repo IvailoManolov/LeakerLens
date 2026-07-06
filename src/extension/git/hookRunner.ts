@@ -4,7 +4,7 @@
  * VS Code, no network. Reads staged blobs via git and scans them.
  *
  * Exit code: 0 = allow commit (warn-only or clean); 1 = block (only when
- * `LEAKLENS_BLOCK=1`, set by the installer when commit-blocking is enabled).
+ * `LEAKERLENS_BLOCK=1`, set by the installer when commit-blocking is enabled).
  */
 import { execFileSync } from 'child_process';
 import { scanText } from '../../engine';
@@ -33,7 +33,7 @@ function stagedContent(file: string): string {
 }
 
 function run(): number {
-  const block = process.env.LEAKLENS_BLOCK === '1';
+  const block = process.env.LEAKERLENS_BLOCK === '1';
   let count = 0;
   for (const file of stagedFiles()) {
     for (const finding of scanText(stagedContent(file), { filename: file })) {
@@ -42,7 +42,7 @@ function run(): number {
     }
   }
   if (count > 0) {
-    process.stderr.write(`\nLeakLens: ${count} potential secret(s) in staged changes.\n`);
+    process.stderr.write(`\nLeakerLens: ${count} potential secret(s) in staged changes.\n`);
     if (block) {
       process.stderr.write('Commit blocked. Remove the secrets, or use "git commit --no-verify" to override.\n');
       return 1;

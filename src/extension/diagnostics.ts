@@ -13,7 +13,7 @@ const SEVERITY_MAP: Record<Severity, vscode.DiagnosticSeverity> = {
 export function toDiagnostic(finding: Finding, doc: vscode.TextDocument): vscode.Diagnostic {
   const range = new vscode.Range(doc.positionAt(finding.start), doc.positionAt(finding.end));
   const diagnostic = new vscode.Diagnostic(range, finding.message, SEVERITY_MAP[finding.severity]);
-  diagnostic.source = 'LeakLens';
+  diagnostic.source = 'LeakerLens';
   diagnostic.code = finding.ruleId;
   return diagnostic;
 }
@@ -35,7 +35,7 @@ export function envExposedDiagnostic(doc: vscode.TextDocument, secretCount: numb
     `⚠ This .env file isn't in .gitignore — ${secretCount} ${plural} will be committed to git.`,
     vscode.DiagnosticSeverity.Warning,
   );
-  diagnostic.source = 'LeakLens';
+  diagnostic.source = 'LeakerLens';
   diagnostic.code = ENV_EXPOSED_CODE;
   return diagnostic;
 }
@@ -55,7 +55,7 @@ export function envTrackedButIgnoredDiagnostic(doc: vscode.TextDocument, name: s
     `This .env is gitignored, but still tracked by git — run "git rm --cached ${name}" to stop committing it.`,
     vscode.DiagnosticSeverity.Information,
   );
-  diagnostic.source = 'LeakLens';
+  diagnostic.source = 'LeakerLens';
   diagnostic.code = ENV_TRACKED_CODE;
   return diagnostic;
 }

@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     // workspace-scoped behavior (e.g. .gitignore-aware scanning) have a real folder root for
     // `vscode.workspace.getWorkspaceFolder`. Launching with the first folder up front avoids the
     // extension-host restart that `updateWorkspaceFolders` would trigger on an empty window.
-    const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'leaklens-ws-'));
+    const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'leakerlens-ws-'));
     const launchArgs = [workspaceDir];
 
     const opts = useShim

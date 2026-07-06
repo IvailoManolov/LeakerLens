@@ -1,13 +1,13 @@
 import { chmodSync } from 'fs';
 import * as vscode from 'vscode';
 
-const RUNNER_NAME = 'leaklens-precommit.cjs';
-const MARKER = 'leaklens-precommit';
+const RUNNER_NAME = 'leakerlens-precommit.cjs';
+const MARKER = 'leakerlens-precommit';
 
 /**
  * Install the opt-in pre-commit guard into `<folder>/.git/hooks`. Copies the bundled
  * runner locally (robust across extension updates) and writes a `pre-commit` shell that
- * invokes it. `blocking` is baked in at install time (from the `leaklens.commitBlocking` setting).
+ * invokes it. `blocking` is baked in at install time (from the `leakerlens.commitBlocking` setting).
  */
 export async function installPreCommitHook(
   extensionUri: vscode.Uri,
@@ -23,8 +23,8 @@ export async function installPreCommitHook(
 
   const script =
     `#!/bin/sh\n` +
-    `# Installed by LeakLens (${MARKER}). Scans staged changes for secrets.\n` +
-    `LEAKLENS_BLOCK=${blocking ? '1' : '0'} node "$(dirname "$0")/${RUNNER_NAME}"\n` +
+    `# Installed by LeakerLens (${MARKER}). Scans staged changes for secrets.\n` +
+    `LEAKERLENS_BLOCK=${blocking ? '1' : '0'} node "$(dirname "$0")/${RUNNER_NAME}"\n` +
     `exit $?\n`;
   const hookUri = vscode.Uri.joinPath(hooksDir, 'pre-commit');
   await vscode.workspace.fs.writeFile(hookUri, Buffer.from(script, 'utf8'));

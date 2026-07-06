@@ -14,7 +14,7 @@ export { start };
 // when the file is the process entry (not lazily required by the CLI) we boot the server.
 if (require.main === module) {
   start().catch((err: unknown) => {
-    process.stderr.write(`LeakLens MCP server failed to start: ${String(err)}\n`);
+    process.stderr.write(`LeakerLens MCP server failed to start: ${String(err)}\n`);
     process.exit(1);
   });
 }

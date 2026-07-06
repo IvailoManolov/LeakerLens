@@ -1,4 +1,4 @@
-# LeakLens v1.1.0 — Architecture (Secret Graph)
+# LeakerLens v1.1.0 — Architecture (Secret Graph)
 
 Covers the **Secret Graph** added in 1.1.0. The core engine/extension/webview split and
 the scan data-flow are unchanged — see [v1.0.0 ARCHITECTURE](../1.0.0/ARCHITECTURE.md).

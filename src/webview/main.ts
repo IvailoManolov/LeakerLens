@@ -1,5 +1,5 @@
 /**
- * LeakLens findings panel — webview client.
+ * LeakerLens findings panel — webview client.
  *
  * Two views over the same data:
  *  - **List**: findings grouped by severity (the v1.0 view).
@@ -122,7 +122,7 @@ function headerHtml(): string {
   return `
     <header class="px-3 py-2 border-b border-border">
       <div class="flex items-center justify-between gap-2">
-        <span class="font-medium">LeakLens</span>
+        <span class="font-medium">LeakerLens</span>
         <div class="flex items-center gap-2">
           <div class="inline-flex rounded overflow-hidden border border-border">
             ${tab('list', 'List')}${tab('tree', 'Tree')}${tab('map', 'Map')}
@@ -139,7 +139,7 @@ function emptyStateHtml(): string {
   return `
     <div class="flex flex-1 flex-col items-center justify-center gap-1 text-center px-4">
       <div class="text-ok text-lg">No secrets detected — you're clean ✓</div>
-      <div class="text-muted">LeakLens watches your files locally as you type.</div>
+      <div class="text-muted">LeakerLens watches your files locally as you type.</div>
     </div>`;
 }
 

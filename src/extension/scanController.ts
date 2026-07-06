@@ -1,7 +1,7 @@
 import { basename } from 'path';
 import * as vscode from 'vscode';
 import { scanText, type Finding } from '../engine';
-import { readConfig, type LeakLensConfig } from './config';
+import { readConfig, type LeakerLensConfig } from './config';
 import { toDiagnostic, envExposedDiagnostic, envTrackedButIgnoredDiagnostic } from './diagnostics';
 import { toDecorationRanges } from './decorations';
 import { isProtectedEnvFile, EnvGitignoreClassifier } from './envFiles';
@@ -48,12 +48,12 @@ export interface Decorations {
 export class ScanController implements vscode.Disposable {
   private readonly results = new Map<string, DocResult>();
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
-  private readonly diagnostics = vscode.languages.createDiagnosticCollection('leaklens');
+  private readonly diagnostics = vscode.languages.createDiagnosticCollection('leakerlens');
   private readonly emitter = new vscode.EventEmitter<void>();
   private readonly envClassifier = new EnvGitignoreClassifier();
   /** Fires whenever the findings cache changes (the panel listens to this). */
   readonly onDidUpdate = this.emitter.event;
-  private config: LeakLensConfig;
+  private config: LeakerLensConfig;
   private inFlightScan: Promise<void> | undefined;
   /** In-flight per-document scans, keyed by URI, for same-version coalescing. */
   private readonly pendingScans = new Map<string, { version: number; promise: Promise<void> }>();

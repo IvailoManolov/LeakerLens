@@ -65,7 +65,7 @@ const CLEAN_SOURCE = `export function add(a: number, b: number): number {\n  ret
 let tmpRoot: string;
 
 beforeAll(() => {
-  tmpRoot = mkdtempSync(join(tmpdir(), 'leaklens-cli-test-'));
+  tmpRoot = mkdtempSync(join(tmpdir(), 'leakerlens-cli-test-'));
 });
 
 afterAll(() => {
@@ -304,12 +304,12 @@ describe('renderSarif', () => {
     expect(parsed.$schema).toContain('sarif-schema-2.1.0');
   });
 
-  it('has exactly one run with tool.driver.name = "LeakLens"', () => {
+  it('has exactly one run with tool.driver.name = "LeakerLens"', () => {
     const parsed = JSON.parse(renderSarif(scanStdinContent(SECRET_SOURCE, 'app.ts'))) as {
       runs: { tool: { driver: { name: string } } }[];
     };
     expect(parsed.runs).toHaveLength(1);
-    expect(parsed.runs[0].tool.driver.name).toBe('LeakLens');
+    expect(parsed.runs[0].tool.driver.name).toBe('LeakerLens');
   });
 
   it('populates tool.driver.rules[] with the seen ruleIds', () => {
@@ -799,7 +799,7 @@ describe('runScanCore', () => {
       runs: { tool: { driver: { name: string; rules: unknown[] } }; results: unknown[] }[];
     };
     expect(parsed.version).toBe('2.1.0');
-    expect(parsed.runs[0].tool.driver.name).toBe('LeakLens');
+    expect(parsed.runs[0].tool.driver.name).toBe('LeakerLens');
     expect(parsed.runs[0].tool.driver.rules.length).toBeGreaterThan(0);
     expect(parsed.runs[0].results.length).toBeGreaterThan(0);
   });
@@ -875,7 +875,7 @@ describe('mainCore', () => {
   it('no args → exit 2, prints usage to stdout', () => {
     const { exitCode, stdout } = mainCore([], io);
     expect(exitCode).toBe(EXIT_USAGE);
-    expect(stdout).toContain('leaklens');
+    expect(stdout).toContain('leakerlens');
   });
 
   it('-h → exit 0, prints usage', () => {

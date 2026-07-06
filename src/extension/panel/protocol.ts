@@ -1,5 +1,5 @@
 /**
- * The webview message protocol for the LeakLens findings panel.
+ * The webview message protocol for the LeakerLens findings panel.
  *
  * Imported by BOTH the extension host (`panelController.ts`) and the webview client
  * (`src/webview/main.ts`). It is the only thing the webview knows about — the webview

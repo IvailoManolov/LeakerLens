@@ -24,22 +24,22 @@ export function registerCommands(
   panel: PanelController,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('leaklens.scanWorkspace', () => scanWorkspace(controller, panel)),
-    vscode.commands.registerCommand('leaklens.showSecretGraph', () => showSecretGraph(controller, panel)),
-    vscode.commands.registerCommand('leaklens.focusPanel', () =>
-      vscode.commands.executeCommand('leaklens.panel.focus'),
+    vscode.commands.registerCommand('leakerlens.scanWorkspace', () => scanWorkspace(controller, panel)),
+    vscode.commands.registerCommand('leakerlens.showSecretGraph', () => showSecretGraph(controller, panel)),
+    vscode.commands.registerCommand('leakerlens.focusPanel', () =>
+      vscode.commands.executeCommand('leakerlens.panel.focus'),
     ),
-    vscode.commands.registerCommand('leaklens.applyRemediation', (arg: RemediationArg) =>
+    vscode.commands.registerCommand('leakerlens.applyRemediation', (arg: RemediationArg) =>
       applyRemediation(arg, controller),
     ),
-    vscode.commands.registerCommand('leaklens.addEnvToGitignore', (uriStr: string) =>
+    vscode.commands.registerCommand('leakerlens.addEnvToGitignore', (uriStr: string) =>
       addEnvToGitignore(uriStr, controller),
     ),
-    vscode.commands.registerCommand('leaklens.installGitHook', () =>
+    vscode.commands.registerCommand('leakerlens.installGitHook', () =>
       installGitHook(context.extensionUri),
     ),
-    vscode.commands.registerCommand('leaklens.uninstallGitHook', () => uninstallGitHook()),
-    vscode.commands.registerCommand('leaklens.setupAgentGuardrails', () =>
+    vscode.commands.registerCommand('leakerlens.uninstallGitHook', () => uninstallGitHook()),
+    vscode.commands.registerCommand('leakerlens.setupAgentGuardrails', () =>
       setupAgentGuardrails(context),
     ),
   );
@@ -61,7 +61,7 @@ async function scanWorkspace(controller: ScanController, panel: PanelController)
       // would flip on an unchanged workspace. Say so instead of pretending the scan is total.
       if (allFiles.length >= SCAN_LIMIT) {
         void vscode.window.showWarningMessage(
-          `LeakLens: workspace exceeds ${SCAN_LIMIT} files — scan results may be incomplete. Add generated folders to .gitignore to narrow the scan.`,
+          `LeakerLens: workspace exceeds ${SCAN_LIMIT} files — scan results may be incomplete. Add generated folders to .gitignore to narrow the scan.`,
         );
       }
       const seen = new Set<string>();
@@ -91,7 +91,7 @@ async function scanWorkspace(controller: ScanController, panel: PanelController)
     // Without this, a failure after the scan's scope reset (e.g. findFiles rejecting) left an
     // empty panel that read as "no secrets found" — with no toast and no error, the next click
     // would flip back to the real count. Fail loudly instead of lying quietly.
-    void vscode.window.showErrorMessage(`LeakLens: workspace scan failed — ${(err as Error).message}`);
+    void vscode.window.showErrorMessage(`LeakerLens: workspace scan failed — ${(err as Error).message}`);
     return;
   } finally {
     panel.setScanning(false);
@@ -102,9 +102,9 @@ async function scanWorkspace(controller: ScanController, panel: PanelController)
     total += findings.length;
   }
   void vscode.window.showInformationMessage(
-    total === 0 ? 'LeakLens: no secrets found. ✓' : `LeakLens: ${total} potential secret(s) found.`,
+    total === 0 ? 'LeakerLens: no secrets found. ✓' : `LeakerLens: ${total} potential secret(s) found.`,
   );
-  await vscode.commands.executeCommand('leaklens.panel.focus');
+  await vscode.commands.executeCommand('leakerlens.panel.focus');
 }
 
 /**
@@ -115,7 +115,7 @@ async function addEnvToGitignore(uriStr: string, controller: ScanController): Pr
   const uri = vscode.Uri.parse(uriStr);
   const folder = vscode.workspace.getWorkspaceFolder(uri) ?? firstWorkspaceFolder();
   if (!folder) {
-    void vscode.window.showWarningMessage('LeakLens: open a folder to edit its .gitignore.');
+    void vscode.window.showWarningMessage('LeakerLens: open a folder to edit its .gitignore.');
     return;
   }
   const pattern = basename(uri.fsPath);
@@ -141,7 +141,7 @@ async function addEnvToGitignore(uriStr: string, controller: ScanController): Pr
   } catch {
     // File gone — nothing to re-scan.
   }
-  void vscode.window.showInformationMessage(`LeakLens: added "${pattern}" to .gitignore. ✓`);
+  void vscode.window.showInformationMessage(`LeakerLens: added "${pattern}" to .gitignore. ✓`);
 }
 
 async function showSecretGraph(controller: ScanController, panel: PanelController): Promise<void> {
@@ -153,26 +153,26 @@ async function showSecretGraph(controller: ScanController, panel: PanelControlle
 async function installGitHook(extensionUri: vscode.Uri): Promise<void> {
   const folder = firstWorkspaceFolder();
   if (!folder) {
-    void vscode.window.showWarningMessage('LeakLens: open a folder to install the pre-commit guard.');
+    void vscode.window.showWarningMessage('LeakerLens: open a folder to install the pre-commit guard.');
     return;
   }
   const blocking = readConfig().commitBlocking;
   try {
     await installPreCommitHook(extensionUri, folder.uri, blocking);
   } catch (err) {
-    void vscode.window.showErrorMessage(`LeakLens: ${(err as Error).message}`);
+    void vscode.window.showErrorMessage(`LeakerLens: ${(err as Error).message}`);
     return;
   }
   void vscode.window.showInformationMessage(
     blocking
-      ? 'LeakLens pre-commit guard installed — commits with secrets will be blocked.'
-      : 'LeakLens pre-commit guard installed (warn-only).',
+      ? 'LeakerLens pre-commit guard installed — commits with secrets will be blocked.'
+      : 'LeakerLens pre-commit guard installed (warn-only).',
   );
 }
 
 /**
- * `LeakLens: Set up agent guardrails`. Wires the bundled MCP server + CLI into the current
- * workspace's AI-agent tooling with zero manual config editing: merges a `leaklens` MCP server
+ * `LeakerLens: Set up agent guardrails`. Wires the bundled MCP server + CLI into the current
+ * workspace's AI-agent tooling with zero manual config editing: merges a `leakerlens` MCP server
  * into the selected agents' config files and writes a concise instruction block into
  * `AGENTS.md` (and `CLAUDE.md` if present + Claude selected). Idempotent — re-running yields
  * identical files.
@@ -180,7 +180,7 @@ async function installGitHook(extensionUri: vscode.Uri): Promise<void> {
 async function setupAgentGuardrails(context: vscode.ExtensionContext): Promise<void> {
   const folder = firstWorkspaceFolder();
   if (!folder) {
-    void vscode.window.showErrorMessage('LeakLens: open a folder to set up agent guardrails.');
+    void vscode.window.showErrorMessage('LeakerLens: open a folder to set up agent guardrails.');
     return;
   }
 
@@ -192,7 +192,7 @@ async function setupAgentGuardrails(context: vscode.ExtensionContext): Promise<v
     AGENT_TARGETS.map((t) => ({ label: t.label, detail: t.detail, picked: true, target: t })),
     {
       canPickMany: true,
-      title: 'LeakLens: configure which AI agents?',
+      title: 'LeakerLens: configure which AI agents?',
       placeHolder: 'All are pre-selected — confirm to write their MCP configs.',
     },
   );
@@ -203,7 +203,7 @@ async function setupAgentGuardrails(context: vscode.ExtensionContext): Promise<v
 
   const changed: string[] = [];
 
-  // 1. Merge the leaklens MCP server into each selected agent's config.
+  // 1. Merge the leakerlens MCP server into each selected agent's config.
   for (const target of selected) {
     await mergeMcpConfigFile(folder.uri, target, mcpPath);
     changed.push(target.configPath);
@@ -226,7 +226,7 @@ async function setupAgentGuardrails(context: vscode.ExtensionContext): Promise<v
   await showSetupSummary(changed, folder.uri);
 }
 
-/** Read a config file (if any), merge the leaklens server, and write it back pretty-printed. */
+/** Read a config file (if any), merge the leakerlens server, and write it back pretty-printed. */
 async function mergeMcpConfigFile(
   folderUri: vscode.Uri,
   target: AgentTarget,
@@ -261,7 +261,7 @@ async function mergeMarkdownBlock(
 /** Info toast summarizing the write, with quick follow-up actions. */
 async function showSetupSummary(changed: readonly string[], folderUri: vscode.Uri): Promise<void> {
   const choice = await vscode.window.showInformationMessage(
-    `LeakLens agent guardrails set up — updated ${changed.join(', ')}. ✓`,
+    `LeakerLens agent guardrails set up — updated ${changed.join(', ')}. ✓`,
     'Open AGENTS.md',
     'Install commit guard',
   );
@@ -269,7 +269,7 @@ async function showSetupSummary(changed: readonly string[], folderUri: vscode.Ur
     const doc = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folderUri, 'AGENTS.md'));
     await vscode.window.showTextDocument(doc);
   } else if (choice === 'Install commit guard') {
-    await vscode.commands.executeCommand('leaklens.installGitHook');
+    await vscode.commands.executeCommand('leakerlens.installGitHook');
   }
 }
 
@@ -303,7 +303,7 @@ async function uninstallGitHook(): Promise<void> {
     return;
   }
   await uninstallPreCommitHook(folder.uri);
-  void vscode.window.showInformationMessage('LeakLens pre-commit guard removed.');
+  void vscode.window.showInformationMessage('LeakerLens pre-commit guard removed.');
 }
 
 function firstWorkspaceFolder(): vscode.WorkspaceFolder | undefined {

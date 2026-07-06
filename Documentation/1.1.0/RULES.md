@@ -1,4 +1,4 @@
-# LeakLens v1.1.0 — Rule Catalogue
+# LeakerLens v1.1.0 — Rule Catalogue
 
 The detection ruleset is **unchanged from v1.0.0** — the Secret Graph is a new
 *visualization* of the same findings, not a detection change. See the full catalogue,
@@ -16,5 +16,5 @@ same secret; it does not affect detection, severity, or remediation.
 
 The `dotenv-value-leak` rule (`UPPER_SNAKE = "…"`) can occasionally fire on long
 high-entropy *config* constants that aren't secrets (e.g. glob patterns). Tightening this
-heuristic is tracked as a follow-up. Until then, the inline `// leaklens:ignore` marker or
+heuristic is tracked as a follow-up. Until then, the inline `// leakerlens:ignore` marker or
 the **Ignore here** quick-fix suppresses any false positive on a line.

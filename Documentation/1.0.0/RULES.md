@@ -1,4 +1,4 @@
-# LeakLens v1.0.0 — Rule Catalogue
+# LeakerLens v1.0.0 — Rule Catalogue
 
 The headline ruleset. Each rule is a small, pure object
 ([`src/engine/types.ts`](../../src/engine/types.ts) → `Rule`) with a regex, an optional
@@ -35,7 +35,7 @@ All rules live in [`src/engine/rules/`](../../src/engine/rules/) and are assembl
 > same span, the more specific/severe one wins overlap-dedupe (e.g. an AWS key beats the
 > generic high-entropy match; Anthropic beats the broad `sk-` rule).
 
-## Precision gates (why LeakLens is quiet)
+## Precision gates (why LeakerLens is quiet)
 
 False positives are the #1 churn risk, so the default ruleset biases toward **precision
 over recall**. Three layers cut noise:
@@ -51,10 +51,10 @@ over recall**. Three layers cut noise:
 
 ## Inline ignore
 
-Add `leaklens:ignore` anywhere on a line to suppress every finding on that line:
+Add `leakerlens:ignore` anywhere on a line to suppress every finding on that line:
 
 ```ts
-const legacyKey = "AKIAIOSFODNN7QWERTYZ"; // leaklens:ignore
+const legacyKey = "AKIAIOSFODNN7QWERTYZ"; // leakerlens:ignore
 ```
 
 The **Ignore here** quick-fix inserts this for you. Suppression is handled in the pure
@@ -66,9 +66,9 @@ Each finding offers one-click fixes (via the lightbulb, the hover, or the panel)
 
 | Kind | Effect |
 |---|---|
-| `ignore` | Append `// leaklens:ignore` to the line |
+| `ignore` | Append `// leakerlens:ignore` to the line |
 | `mask` | Replace the secret in-place with `****` of equal length |
-| `moveToEnv` | Append the secret to the workspace `.env` and replace it with `process.env.LEAKLENS_SECRET` |
+| `moveToEnv` | Append the secret to the workspace `.env` and replace it with `process.env.LEAKERLENS_SECRET` |
 
 The `private-key` rule offers only `ignore`/`mask` (a PEM block can't be swapped for an
 inline env reference).

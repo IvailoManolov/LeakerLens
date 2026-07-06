@@ -21,11 +21,11 @@ export class LeakCodeActionProvider implements vscode.CodeActionProvider {
     // "Add to .gitignore" on the exposed-`.env` warning.
     if (context.diagnostics.some((d) => d.code === ENV_EXPOSED_CODE)) {
       const action = new vscode.CodeAction(
-        'LeakLens: Add this .env file to .gitignore',
+        'LeakerLens: Add this .env file to .gitignore',
         vscode.CodeActionKind.QuickFix,
       );
       action.command = {
-        command: 'leaklens.addEnvToGitignore',
+        command: 'leakerlens.addEnvToGitignore',
         title: 'Add to .gitignore',
         arguments: [document.uri.toString()],
       };
@@ -44,7 +44,7 @@ export class LeakCodeActionProvider implements vscode.CodeActionProvider {
       const line = document.positionAt(finding.start).line;
       for (const remediation of finding.remediations) {
         const action = new vscode.CodeAction(
-          `LeakLens: ${remediation.title}`,
+          `LeakerLens: ${remediation.title}`,
           vscode.CodeActionKind.QuickFix,
         );
         const arg: RemediationArg = {
@@ -55,7 +55,7 @@ export class LeakCodeActionProvider implements vscode.CodeActionProvider {
           kind: remediation.kind,
         };
         action.command = {
-          command: 'leaklens.applyRemediation',
+          command: 'leakerlens.applyRemediation',
           title: remediation.title,
           arguments: [arg],
         };

@@ -1,12 +1,12 @@
 /**
- * Headless `leaklens` CLI. Bundled to `dist/cli.js` (Node, CJS) and exposed via the
+ * Headless `leakerlens` CLI. Bundled to `dist/cli.js` (Node, CJS) and exposed via the
  * package `bin` so AI coding agents and CI can scan for secrets from a terminal. It reuses
  * the *pure* detection engine ({@link ../engine}) verbatim — no detection logic lives here,
  * and like the git hook runner it never touches `vscode` and makes no network calls.
  *
  * Subcommands:
- *   `leaklens scan [globs/paths...]` (or `--stdin --filename <name>`)
- *   `leaklens mcp`  — start the local stdio MCP server for AI coding agents.
+ *   `leakerlens scan [globs/paths...]` (or `--stdin --filename <name>`)
+ *   `leakerlens mcp`  — start the local stdio MCP server for AI coding agents.
  * Output: human text (default), `--json`, or `--sarif`. Exit codes: 0 = clean,
  * 1 = findings present, 2 = usage/IO error.
  *
@@ -40,7 +40,7 @@ function runMcp(): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const mcp = require(mcpModulePath) as { start: () => Promise<void> };
   mcp.start().catch((err: unknown) => {
-    process.stderr.write(`leaklens: MCP server failed: ${String(err)}\n`);
+    process.stderr.write(`leakerlens: MCP server failed: ${String(err)}\n`);
     process.exit(1);
   });
 }

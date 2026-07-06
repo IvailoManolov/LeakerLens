@@ -28,7 +28,7 @@ const REMEDIATION_TITLES: Record<RemediationKind, string> = {
 const DEFAULT_REMEDIATION_KINDS: readonly RemediationKind[] = ['ignore', 'mask', 'moveToEnv'];
 
 /** Inline suppression marker: a finding on a line containing this is dropped. */
-export const IGNORE_MARKER = 'leaklens:ignore';
+export const IGNORE_MARKER = 'leakerlens:ignore';
 
 /** Offsets of the first character of each line (line 0 starts at 0). */
 function computeLineStarts(text: string): number[] {
@@ -150,7 +150,7 @@ function dedupeOverlaps(findings: Finding[]): Finding[] {
   return kept;
 }
 
-/** Drop findings on lines carrying the inline `leaklens:ignore` marker. */
+/** Drop findings on lines carrying the inline `leakerlens:ignore` marker. */
 function suppressIgnored(findings: Finding[], text: string, lineStarts: number[]): Finding[] {
   if (!text.includes(IGNORE_MARKER)) {
     return findings;

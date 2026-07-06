@@ -1,6 +1,6 @@
 {
   "name": "leakerlens",
-  "displayName": "LeakLens",
+  "displayName": "LeakerLens",
   "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
   "version": "5.0.2",
   "publisher": "Manolov",
@@ -31,7 +31,7 @@
   "icon": "media/icon.png",
   "main": "./dist/extension.js",
   "bin": {
-    "leaklens": "./dist/cli.js"
+    "leakerlens": "./dist/cli.js"
   },
   "activationEvents": [
     "onStartupFinished"
@@ -39,69 +39,69 @@
   "contributes": {
     "commands": [
       {
-        "command": "leaklens.scanWorkspace",
-        "title": "LeakLens: Scan Workspace for Secrets"
+        "command": "leakerlens.scanWorkspace",
+        "title": "LeakerLens: Scan Workspace for Secrets"
       },
       {
-        "command": "leaklens.focusPanel",
-        "title": "LeakLens: Show Findings Panel"
+        "command": "leakerlens.focusPanel",
+        "title": "LeakerLens: Show Findings Panel"
       },
       {
-        "command": "leaklens.showSecretGraph",
-        "title": "LeakLens: Show Secret Graph"
+        "command": "leakerlens.showSecretGraph",
+        "title": "LeakerLens: Show Secret Graph"
       },
       {
-        "command": "leaklens.setupAgentGuardrails",
-        "title": "LeakLens: Set up agent guardrails"
+        "command": "leakerlens.setupAgentGuardrails",
+        "title": "LeakerLens: Set up agent guardrails"
       },
       {
-        "command": "leaklens.installGitHook",
-        "title": "LeakLens: Install Pre-commit Guard (this repo)"
+        "command": "leakerlens.installGitHook",
+        "title": "LeakerLens: Install Pre-commit Guard (this repo)"
       },
       {
-        "command": "leaklens.uninstallGitHook",
-        "title": "LeakLens: Remove Pre-commit Guard (this repo)"
+        "command": "leakerlens.uninstallGitHook",
+        "title": "LeakerLens: Remove Pre-commit Guard (this repo)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "leaklens",
-          "title": "LeakLens",
+          "id": "leakerlens",
+          "title": "LeakerLens",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "leaklens": [
+      "leakerlens": [
         {
-          "id": "leaklens.panel",
+          "id": "leakerlens.panel",
           "name": "Findings",
           "type": "webview"
         }
       ]
     },
     "configuration": {
-      "title": "LeakLens",
+      "title": "LeakerLens",
       "properties": {
-        "leaklens.enable": {
+        "leakerlens.enable": {
           "type": "boolean",
           "default": true,
           "description": "Enable real-time secret detection."
         },
-        "leaklens.debounceMs": {
+        "leakerlens.debounceMs": {
           "type": "number",
           "default": 200,
           "minimum": 50,
           "maximum": 1000,
           "description": "Delay after typing stops before re-scanning a document (ms)."
         },
-        "leaklens.commitBlocking": {
+        "leakerlens.commitBlocking": {
           "type": "boolean",
           "default": false,
           "description": "When the pre-commit guard is installed, block commits that contain secrets. When off, the guard warns only."
         },
-        "leaklens.maxFileSizeKb": {
+        "leakerlens.maxFileSizeKb": {
           "type": "number",
           "default": 2048,
           "description": "Skip real-time scanning of files larger than this (KB) to protect typing latency."

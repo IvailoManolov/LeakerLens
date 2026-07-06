@@ -1,5 +1,5 @@
 /**
- * Local stdio MCP server for LeakLens. Lets AI coding agents (Claude Code, Cursor,
+ * Local stdio MCP server for LeakerLens. Lets AI coding agents (Claude Code, Cursor,
  * Windsurf, …) call the detection engine directly — `scan_text` before writing a snippet
  * to disk, `scan_file` for one file, `scan_workspace` for a sweep — instead of shelling out
  * and parsing CLI text.
@@ -8,7 +8,7 @@
  * detection engine verbatim: no detection logic, file-walking, gitignore handling, env-file
  * policy, or JSON shaping is reimplemented here — every result is produced by the same
  * `scanFiles`/`scanStdinContent` + `toJsonFinding`/`renderJson` building blocks the CLI uses,
- * so MCP output is byte-for-byte consistent with `leaklens scan --json`. It never imports
+ * so MCP output is byte-for-byte consistent with `leakerlens scan --json`. It never imports
  * `vscode` and makes no network calls.
  *
  * Privacy invariant: only `matchPreview` + `fingerprint` ever cross the wire (see
@@ -39,9 +39,9 @@ import type { Severity } from '../engine';
  * MCP identity tracks the single source of truth without a duplicated literal or a runtime
  * filesystem read. Falls back to `0.0.0` when run un-bundled (e.g. ts-node in tests).
  */
-declare const __LEAKLENS_VERSION__: string | undefined;
+declare const __LEAKERLENS_VERSION__: string | undefined;
 const PKG_VERSION: string =
-  typeof __LEAKLENS_VERSION__ === 'string' ? __LEAKLENS_VERSION__ : '0.0.0';
+  typeof __LEAKERLENS_VERSION__ === 'string' ? __LEAKERLENS_VERSION__ : '0.0.0';
 
 // ---------------------------------------------------------------------------
 // Result shape (identical to the CLI's `--json` payload)
@@ -79,7 +79,7 @@ export interface ToolResult {
 /**
  * Turn located findings into the stable `{ findings, summary }` object plus a one-glance
  * text summary. Sorting matches {@link compareLocated} (the CLI order) so results are
- * deterministic and identical to `leaklens scan --json`.
+ * deterministic and identical to `leakerlens scan --json`.
  */
 export function buildResult(located: readonly LocatedFinding[]): ToolResult {
   const sorted = [...located].sort(compareLocated);
@@ -128,7 +128,7 @@ export function summarize(result: ScanResult): string {
 export function handleScanText(input: { text: string; filename?: string }): ToolResult {
   const filename = input.filename && input.filename.length > 0 ? input.filename : 'snippet.txt';
   // Reuse the CLI's stdin scanner so a snippet scan is byte-for-byte identical to
-  // `leaklens scan --stdin --filename <name>`.
+  // `leakerlens scan --stdin --filename <name>`.
   return buildResult(scanStdinContent(input.text, filename));
 }
 
@@ -154,7 +154,7 @@ export function handleScanFile(input: { path: string }, cwd: string): ToolResult
 
 /**
  * `scan_workspace` handler. Walks the given paths (or `root`, or `cwd`), respecting
- * `.gitignore` + EXCLUDED_DIRS + the env-file policy — exactly like `leaklens scan` —
+ * `.gitignore` + EXCLUDED_DIRS + the env-file policy — exactly like `leakerlens scan` —
  * via the CLI's {@link scanFiles}.
  */
 export function handleScanWorkspace(
@@ -188,7 +188,7 @@ function fail(message: string): {
   content: { type: 'text'; text: string }[];
   isError: true;
 } {
-  return { content: [{ type: 'text', text: `LeakLens: ${message}` }], isError: true };
+  return { content: [{ type: 'text', text: `LeakerLens: ${message}` }], isError: true };
 }
 
 /**
@@ -197,7 +197,7 @@ function fail(message: string): {
  * without touching stdio. `cwd` is injected for deterministic, testable path resolution.
  */
 export function createServer(cwd: string = process.cwd()): McpServer {
-  const server = new McpServer({ name: 'leaklens', version: PKG_VERSION });
+  const server = new McpServer({ name: 'leakerlens', version: PKG_VERSION });
 
   server.registerTool(
     'scan_text',
@@ -251,7 +251,7 @@ export function createServer(cwd: string = process.cwd()): McpServer {
       title: 'Scan the workspace for secrets',
       description:
         'Scan the workspace (or given paths) for secrets and return all problems found. ' +
-        'Respects .gitignore and the same exclusions as `leaklens scan`. Returns masked ' +
+        'Respects .gitignore and the same exclusions as `leakerlens scan`. Returns masked ' +
         'findings — never the raw secret.',
       inputSchema: {
         paths: z
@@ -290,5 +290,5 @@ export async function start(): Promise<void> {
   const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  process.stderr.write('LeakLens MCP server listening on stdio.\n');
+  process.stderr.write('LeakerLens MCP server listening on stdio.\n');
 }

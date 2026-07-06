@@ -1,6 +1,6 @@
-# LeakLens — Local Secret Leak Guard for VS Code
+# LeakerLens — Local Secret Leak Guard for VS Code
 
-> Working codename: **LeakLens**. A VS Code extension that catches API keys, tokens,
+> Working codename: **LeakerLens**. A VS Code extension that catches API keys, tokens,
 > passwords, and `.env` secrets **as you type and before you commit** — with **100% of
 > analysis running locally**. Nothing ever leaves the user's machine.
 
@@ -41,7 +41,7 @@ configuration, zero friction, and zero data leaving their machine**. The product
   Stripe, OpenAI/Anthropic keys, JWTs, private keys, generic high-entropy strings, `.env`
   value leaks into source, etc.).
 - One-click remediation: ignore (inline annotation), move-to-`.env`, or mask.
-- A beautiful, calm "LeakLens panel" summarizing findings for the workspace.
+- A beautiful, calm "LeakerLens panel" summarizing findings for the workspace.
 
 **Explicitly OUT of scope (resist scope creep — these break a principle or the business):**
 - ❌ Any AI/LLM-based detection or explanation. (Token burn → kills the cost model.)
@@ -72,7 +72,7 @@ src/
   extension/     # VS Code glue. Thin. Subscribes to events, renders UI.
     diagnostics  # Inline squiggles via DiagnosticCollection.
     decorations  # Gutter icons / inline decorations.
-    panel        # The LeakLens findings webview (see UX rules).
+    panel        # The LeakerLens findings webview (see UX rules).
     commands     # Ignore / move-to-env / mask / scan-workspace.
     git          # Pre-commit hook integration (local git hook, opt-in).
 ```
@@ -121,13 +121,13 @@ The owner's explicit bar: **easy + beautiful.** UX bugs are P1 bugs. Principles:
    Markdown, tasteful, scannable. No walls of text.
 5. **One-click remediation, always reachable.** Quick Fix (lightbulb) + hover action:
    *Ignore here* / *Move to .env* / *Mask*. Make the safe path the easy path.
-6. **The LeakLens panel** (if/when built) is a calm summary: grouped by severity, click to
+6. **The LeakerLens panel** (if/when built) is a calm summary: grouped by severity, click to
    jump, empty-state that feels reassuring ("No secrets detected — you're clean ✓"), not
    blank. Use a webview only if native tree/views can't deliver the polish; prefer native.
 7. **Iconography & microcopy matter.** One consistent, crisp icon. Human, confident copy.
    No jargon, no fear-mongering, no growth-hacky nags.
 8. **Respect the user.** Never modify files without explicit action. Ignore decisions
-   persist (inline `// leaklens:ignore` style or workspace config). No surprise blocking
+   persist (inline `// leakerlens:ignore` style or workspace config). No surprise blocking
    unless the user opted into commit-blocking.
 
 When in doubt on UX: **fewer surfaces, more polish.** A beautiful, tiny product beats a

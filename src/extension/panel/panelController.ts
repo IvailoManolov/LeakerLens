@@ -120,7 +120,7 @@ function buildSecretNodes(
  * {@link PanelState} on every scan update and handles {@link PanelToHost} actions.
  */
 export class PanelController implements vscode.WebviewViewProvider, vscode.Disposable {
-  static readonly viewId = 'leaklens.panel';
+  static readonly viewId = 'leakerlens.panel';
 
   private view: vscode.WebviewView | undefined;
   private scanning = false;
@@ -131,7 +131,7 @@ export class PanelController implements vscode.WebviewViewProvider, vscode.Dispo
     private readonly extensionUri: vscode.Uri,
     private readonly controller: ScanController,
   ) {
-    this.log = vscode.window.createOutputChannel('LeakLens');
+    this.log = vscode.window.createOutputChannel('LeakerLens');
     this.disposables.push(this.log);
     this.disposables.push(controller.onDidUpdate(() => this.push()));
   }
@@ -247,7 +247,7 @@ export class PanelController implements vscode.WebviewViewProvider, vscode.Dispo
         this.push();
         return;
       case 'rescan':
-        await vscode.commands.executeCommand('leaklens.scanWorkspace');
+        await vscode.commands.executeCommand('leakerlens.scanWorkspace');
         return;
       case 'jumpTo':
         await this.jumpTo(message.loc);
@@ -272,7 +272,7 @@ export class PanelController implements vscode.WebviewViewProvider, vscode.Dispo
       editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
     } catch (err) {
       this.log.appendLine(`jumpTo error: ${(err as Error).message}`);
-      void vscode.window.showErrorMessage(`LeakLens: couldn't open the file — ${(err as Error).message}`);
+      void vscode.window.showErrorMessage(`LeakerLens: couldn't open the file — ${(err as Error).message}`);
     }
   }
 
@@ -285,7 +285,7 @@ export class PanelController implements vscode.WebviewViewProvider, vscode.Dispo
       await applyRemediation({ uri: loc.uri, start: loc.start, end: loc.end, line, kind }, this.controller);
     } catch (err) {
       this.log.appendLine(`remediate error: ${(err as Error).message}`);
-      void vscode.window.showErrorMessage(`LeakLens: couldn't apply "${kind}" — ${(err as Error).message}`);
+      void vscode.window.showErrorMessage(`LeakerLens: couldn't apply "${kind}" — ${(err as Error).message}`);
     }
   }
 

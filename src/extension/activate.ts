@@ -62,7 +62,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('leaklens')) {
+      if (e.affectsConfiguration('leakerlens')) {
         controller.reloadConfig();
       }
     }),
@@ -71,7 +71,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommands(context, controller, panel);
 
   // Refresh the version-stable MCP/CLI runner copies in globalStorage so agent configs written
-  // by `leaklens.setupAgentGuardrails` keep working across extension updates. Fire-and-forget:
+  // by `leakerlens.setupAgentGuardrails` keep working across extension updates. Fire-and-forget:
   // it must never delay activation, and any failure is recovered at command time.
   void ensureAgentRunners(context).catch(() => {
     // Best-effort; the command re-runs this defensively before it needs the paths.

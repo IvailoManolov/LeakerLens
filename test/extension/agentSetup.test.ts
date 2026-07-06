@@ -43,18 +43,18 @@ import {
 // ---------------------------------------------------------------------------
 
 describe('SERVER_NAME', () => {
-  it('is the string "leaklens"', () => {
-    expect(SERVER_NAME).toBe('leaklens');
+  it('is the string "leakerlens"', () => {
+    expect(SERVER_NAME).toBe('leakerlens');
   });
 });
 
 describe('BLOCK_START / BLOCK_END', () => {
   it('BLOCK_START is the expected HTML comment marker', () => {
-    expect(BLOCK_START).toBe('<!-- leaklens:start -->');
+    expect(BLOCK_START).toBe('<!-- leakerlens:start -->');
   });
 
   it('BLOCK_END is the expected HTML comment marker', () => {
-    expect(BLOCK_END).toBe('<!-- leaklens:end -->');
+    expect(BLOCK_END).toBe('<!-- leakerlens:end -->');
   });
 
   it('BLOCK_START and BLOCK_END are different strings', () => {
@@ -239,9 +239,9 @@ describe('buildInstructionBlock', () => {
     expect(block).toContain('scan_workspace');
   });
 
-  it('contains the leaklens MCP server reference', () => {
+  it('contains the leakerlens MCP server reference', () => {
     const block = buildInstructionBlock(CLI_PATH);
-    expect(block).toContain('leaklens');
+    expect(block).toContain('leakerlens');
   });
 
   it('mentions never hardcoding secrets guidance', () => {
@@ -414,7 +414,7 @@ describe('stripJsonComments', () => {
   it('handles a string with // comment immediately after last property and trailing comma', () => {
     const input = `{
   "mcpServers": {
-    "leaklens": { "command": "node" }, // trailing
+    "leakerlens": { "command": "node" }, // trailing
   }
 }`;
     const result = stripJsonComments(input);
@@ -525,10 +525,10 @@ describe('parseJsonObject', () => {
 // ---------------------------------------------------------------------------
 
 describe('mergeMcpConfig', () => {
-  /** Canonical leaklens entry for Claude/Cursor (no type). */
+  /** Canonical leakerlens entry for Claude/Cursor (no type). */
   const entry: McpServerEntry = { command: 'node', args: ['/global/mcp.js'] };
 
-  /** Canonical leaklens entry for VS Code (type: "stdio"). */
+  /** Canonical leakerlens entry for VS Code (type: "stdio"). */
   const stdioEntry: McpServerEntry = { type: 'stdio', command: 'node', args: ['/global/mcp.js'] };
 
   // -------------------------------------------------------------------------
@@ -542,10 +542,10 @@ describe('mergeMcpConfig', () => {
     expect(parsed.mcpServers).toBeDefined();
   });
 
-  it('undefined input → mcpServers contains only leaklens', () => {
+  it('undefined input → mcpServers contains only leakerlens', () => {
     const output = mergeMcpConfig(undefined, 'mcpServers', entry);
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
-    expect(Object.keys(parsed.mcpServers)).toEqual(['leaklens']);
+    expect(Object.keys(parsed.mcpServers)).toEqual(['leakerlens']);
   });
 
   it('empty string input → produces a valid JSON object', () => {
@@ -553,28 +553,28 @@ describe('mergeMcpConfig', () => {
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
     expect(parsed.mcpServers).toBeDefined();
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('whitespace-only input → produces a valid JSON object', () => {
     const output = mergeMcpConfig('   \n  ', 'mcpServers', entry);
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   // -------------------------------------------------------------------------
-  // Existing server preserved when adding leaklens
+  // Existing server preserved when adding leakerlens
   // -------------------------------------------------------------------------
 
-  it('existing server under the same key is preserved when leaklens is added', () => {
+  it('existing server under the same key is preserved when leakerlens is added', () => {
     const existing = JSON.stringify({
       mcpServers: { other: { command: 'npx', args: ['other-tool'] } },
     });
     const output = mergeMcpConfig(existing, 'mcpServers', entry);
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
     expect(parsed.mcpServers['other']).toBeDefined();
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('existing server preserves its exact fields', () => {
@@ -600,7 +600,7 @@ describe('mergeMcpConfig', () => {
     expect(Object.keys(parsed.mcpServers)).toContain('alpha');
     expect(Object.keys(parsed.mcpServers)).toContain('beta');
     expect(Object.keys(parsed.mcpServers)).toContain('gamma');
-    expect(Object.keys(parsed.mcpServers)).toContain('leaklens');
+    expect(Object.keys(parsed.mcpServers)).toContain('leakerlens');
   });
 
   // -------------------------------------------------------------------------
@@ -654,7 +654,7 @@ describe('mergeMcpConfig', () => {
     // Original mcpServers preserved
     expect(parsed.mcpServers['claude_tool']).toBeDefined();
     // New servers key added
-    expect(parsed.servers['leaklens']).toBeDefined();
+    expect(parsed.servers['leakerlens']).toBeDefined();
   });
 
   // -------------------------------------------------------------------------
@@ -704,7 +704,7 @@ describe('mergeMcpConfig', () => {
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
     expect(parsed.mcpServers['other']).toBeDefined();
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('tolerates /* */ block comments in input', () => {
@@ -712,7 +712,7 @@ describe('mergeMcpConfig', () => {
     const output = mergeMcpConfig(jsonc, 'mcpServers', entry);
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('tolerates trailing commas in input', () => {
@@ -725,7 +725,7 @@ describe('mergeMcpConfig', () => {
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
     expect(parsed.mcpServers['other']).toBeDefined();
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('JSONC output is strict JSON (no comments, no trailing commas)', () => {
@@ -749,28 +749,28 @@ describe('mergeMcpConfig', () => {
     const output = mergeMcpConfig('not json', 'mcpServers', entry);
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('JSON array input "[]" recovers to a fresh object', () => {
     const output = mergeMcpConfig('[]', 'mcpServers', entry);
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('JSON number input "42" recovers to a fresh object', () => {
     const output = mergeMcpConfig('42', 'mcpServers', entry);
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('JSON string literal recovers to a fresh object', () => {
     const output = mergeMcpConfig('"a string"', 'mcpServers', entry);
     expect(() => JSON.parse(output)).not.toThrow();
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   // -------------------------------------------------------------------------
@@ -788,7 +788,7 @@ describe('mergeMcpConfig', () => {
     expect(output.endsWith('\n')).toBe(true);
   });
 
-  it('top-level key maps the server entry under SERVER_NAME ("leaklens")', () => {
+  it('top-level key maps the server entry under SERVER_NAME ("leakerlens")', () => {
     const output = mergeMcpConfig(undefined, 'mcpServers', entry);
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
     const serverKey = Object.keys(parsed.mcpServers)[0];
@@ -805,14 +805,14 @@ describe('mergeMcpConfig', () => {
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
     // should be an object now, not an array
     expect(Array.isArray(parsed.mcpServers)).toBe(false);
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 
   it('top-level key with null is replaced by a fresh servers map', () => {
     const existing = JSON.stringify({ mcpServers: null });
     const output = mergeMcpConfig(existing, 'mcpServers', entry);
     const parsed = JSON.parse(output) as Record<string, Record<string, unknown>>;
-    expect(parsed.mcpServers['leaklens']).toBeDefined();
+    expect(parsed.mcpServers['leakerlens']).toBeDefined();
   });
 });
 
@@ -1058,10 +1058,10 @@ describe('round-trip: buildServerEntry → mergeMcpConfig', () => {
     const entry = buildServerEntry('/storage/mcp.js', claudeTarget.stdioType);
     const output = mergeMcpConfig(undefined, claudeTarget.topLevelKey, entry);
     const parsed = JSON.parse(output) as Record<string, Record<string, McpServerEntry>>;
-    const leaklens = parsed[claudeTarget.topLevelKey]['leaklens'];
-    expect(leaklens.command).toBe('node');
-    expect('type' in leaklens).toBe(false);
-    expect(leaklens.args[0]).toBe('/storage/mcp.js');
+    const leakerlens = parsed[claudeTarget.topLevelKey]['leakerlens'];
+    expect(leakerlens.command).toBe('node');
+    expect('type' in leakerlens).toBe(false);
+    expect(leakerlens.args[0]).toBe('/storage/mcp.js');
   });
 
   it('VS Code target: correct key and type="stdio" in entry', () => {
@@ -1069,8 +1069,8 @@ describe('round-trip: buildServerEntry → mergeMcpConfig', () => {
     const entry = buildServerEntry('/storage/mcp.js', vscodeTarget.stdioType);
     const output = mergeMcpConfig(undefined, vscodeTarget.topLevelKey, entry);
     const parsed = JSON.parse(output) as Record<string, Record<string, McpServerEntry>>;
-    const leaklens = parsed[vscodeTarget.topLevelKey]['leaklens'];
-    expect(leaklens.type).toBe('stdio');
+    const leakerlens = parsed[vscodeTarget.topLevelKey]['leakerlens'];
+    expect(leakerlens.type).toBe('stdio');
     expect('servers' in parsed).toBe(true);
     expect('mcpServers' in parsed).toBe(false);
   });
@@ -1080,8 +1080,8 @@ describe('round-trip: buildServerEntry → mergeMcpConfig', () => {
     const entry = buildServerEntry('/storage/mcp.js', cursorTarget.stdioType);
     const output = mergeMcpConfig(undefined, cursorTarget.topLevelKey, entry);
     const parsed = JSON.parse(output) as Record<string, Record<string, McpServerEntry>>;
-    const leaklens = parsed[cursorTarget.topLevelKey]['leaklens'];
-    expect(leaklens.type).toBe('stdio');
+    const leakerlens = parsed[cursorTarget.topLevelKey]['leakerlens'];
+    expect(leakerlens.type).toBe('stdio');
     expect('mcpServers' in parsed).toBe(true);
   });
 

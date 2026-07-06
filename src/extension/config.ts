@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-/** Resolved LeakLens settings, read from the `leaklens.*` configuration section. */
-export interface LeakLensConfig {
+/** Resolved LeakerLens settings, read from the `leakerlens.*` configuration section. */
+export interface LeakerLensConfig {
   readonly enable: boolean;
   readonly debounceMs: number;
   readonly commitBlocking: boolean;
@@ -9,8 +9,8 @@ export interface LeakLensConfig {
 }
 
 /** Read current settings. Cheap; call on activation and on configuration change. */
-export function readConfig(): LeakLensConfig {
-  const c = vscode.workspace.getConfiguration('leaklens');
+export function readConfig(): LeakerLensConfig {
+  const c = vscode.workspace.getConfiguration('leakerlens');
   return {
     enable: c.get<boolean>('enable', true),
     debounceMs: c.get<number>('debounceMs', 200),

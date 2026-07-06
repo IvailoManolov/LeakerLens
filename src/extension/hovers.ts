@@ -43,7 +43,7 @@ function actionLinks(document: vscode.TextDocument, finding: Finding): string {
         kind: r.kind,
       };
       const encoded = encodeURIComponent(JSON.stringify([arg]));
-      return `[${r.title}](command:leaklens.applyRemediation?${encoded})`;
+      return `[${r.title}](command:leakerlens.applyRemediation?${encoded})`;
     })
     .join(' · ');
 }

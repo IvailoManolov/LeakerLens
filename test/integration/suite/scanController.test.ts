@@ -22,7 +22,7 @@ import { isInScanScope, SCAN_EXCLUDE, filterGitignored } from '../../../src/exte
 // ---------------------------------------------------------------------------
 
 function tempFile(name: string, content: string): vscode.Uri {
-  const dir = mkdtempSync(path.join(tmpdir(), 'leaklens-sc-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'leakerlens-sc-'));
   const file = path.join(dir, name);
   writeFileSync(file, content, 'utf8');
   return vscode.Uri.file(file);
@@ -58,11 +58,11 @@ const SECRET_LINE = `const k = "${AWS_KEY}"`;
 
 describe('scanScope — isInScanScope', () => {
   it('SCAN_EXCLUDE and SCAN_LIMIT are exported and the extension activates', async () => {
-    const ext = vscode.extensions.getExtension('leaklens.leaklens');
+    const ext = vscode.extensions.getExtension('Manolov.leakerlens');
     assert.ok(ext, 'extension must be installed');
     await ext.activate();
     const cmds = await vscode.commands.getCommands(true);
-    assert.ok(cmds.includes('leaklens.scanWorkspace'), 'scanWorkspace command registered');
+    assert.ok(cmds.includes('leakerlens.scanWorkspace'), 'scanWorkspace command registered');
   });
 
   it('SCAN_EXCLUDE contains out-test and .sandbox (Fix B: mirror guard)', () => {
@@ -179,7 +179,7 @@ describe('ScanController — findings partition', () => {
     await waitFor(() => vscode.languages.getDiagnostics(uri).length > 0);
     const diags = vscode.languages.getDiagnostics(uri);
     assert.ok(diags.length >= 1, 'at least one diagnostic for the secret');
-    assert.strictEqual(diags[0].source, 'LeakLens');
+    assert.strictEqual(diags[0].source, 'LeakerLens');
     assert.strictEqual(diags[0].code, 'aws-access-key-id');
   });
 
@@ -196,7 +196,7 @@ describe('ScanController — findings partition', () => {
 
   it('scanWorkspace command completes without throwing', async () => {
     await assert.doesNotReject(
-      () => Promise.resolve(vscode.commands.executeCommand('leaklens.scanWorkspace')),
+      () => Promise.resolve(vscode.commands.executeCommand('leakerlens.scanWorkspace')),
       'scanWorkspace must not throw',
     );
   });
@@ -208,16 +208,16 @@ describe('ScanController — findings partition', () => {
 
 describe('ScanController — runWorkspaceScan coalesces concurrent calls', () => {
   it('a second call while one is in flight returns the same promise (fn runs once)', async () => {
-    const ext = vscode.extensions.getExtension('leaklens.leaklens');
+    const ext = vscode.extensions.getExtension('Manolov.leakerlens');
     assert.ok(ext, 'extension must be installed');
     await ext.activate();
 
     let resolved = 0;
     const p1 = vscode.commands
-      .executeCommand('leaklens.scanWorkspace')
+      .executeCommand('leakerlens.scanWorkspace')
       .then(() => { resolved++; });
     const p2 = vscode.commands
-      .executeCommand('leaklens.scanWorkspace')
+      .executeCommand('leakerlens.scanWorkspace')
       .then(() => { resolved++; });
     await Promise.all([p1, p2]);
     assert.strictEqual(resolved, 2, 'both concurrent callers must resolve');
@@ -252,15 +252,15 @@ describe('ScanController — scanNow is awaitable', () => {
  * The returned dir must be unique per test so the git classifier runs git in the right cwd.
  */
 function createTrackedButIgnoredEnvRepo(): string {
-  const repoDir = mkdtempSync(path.join(tmpdir(), 'leaklens-git-'));
+  const repoDir = mkdtempSync(path.join(tmpdir(), 'leakerlens-git-'));
   const gitExec = (...args: string[]): void => {
     execFileSync('git', args, { cwd: repoDir, stdio: 'pipe' });
   };
 
   gitExec('init');
   // Minimal identity so git commit does not fail on a fresh machine.
-  gitExec('config', 'user.email', 'test@leaklens.test');
-  gitExec('config', 'user.name', 'LeakLens Test');
+  gitExec('config', 'user.email', 'test@leakerlens.test');
+  gitExec('config', 'user.name', 'LeakerLens Test');
 
   // Write .gitignore that ignores .env
   writeFileSync(path.join(repoDir, '.gitignore'), '.env\n', 'utf8');
@@ -272,7 +272,7 @@ function createTrackedButIgnoredEnvRepo(): string {
   // developer who added the .env before adding the ignore rule, or used git add -f).
   writeFileSync(
     path.join(repoDir, '.env'),
-    `LEAKLENS_SECRET=${AWS_KEY}\n`,
+    `LEAKERLENS_SECRET=${AWS_KEY}\n`,
     'utf8',
   );
   gitExec('add', '-f', '.env');
@@ -286,14 +286,14 @@ function createTrackedButIgnoredEnvRepo(): string {
  * This is the "exposed" path: git would commit the secrets.
  */
 function createExposedEnvRepo(): string {
-  const repoDir = mkdtempSync(path.join(tmpdir(), 'leaklens-git-exposed-'));
+  const repoDir = mkdtempSync(path.join(tmpdir(), 'leakerlens-git-exposed-'));
   const gitExec = (...args: string[]): void => {
     execFileSync('git', args, { cwd: repoDir, stdio: 'pipe' });
   };
 
   gitExec('init');
-  gitExec('config', 'user.email', 'test@leaklens.test');
-  gitExec('config', 'user.name', 'LeakLens Test');
+  gitExec('config', 'user.email', 'test@leakerlens.test');
+  gitExec('config', 'user.name', 'LeakerLens Test');
 
   // No .gitignore rule for .env — the file is deliberately tracked without protection.
   writeFileSync(path.join(repoDir, '.gitignore'), '# intentionally empty\n', 'utf8');
@@ -302,7 +302,7 @@ function createExposedEnvRepo(): string {
 
   writeFileSync(
     path.join(repoDir, '.env'),
-    `LEAKLENS_SECRET=${AWS_KEY}\n`,
+    `LEAKERLENS_SECRET=${AWS_KEY}\n`,
     'utf8',
   );
   gitExec('add', '.env');
@@ -353,7 +353,7 @@ describe('Fix A — .env git classification', () => {
       vscode.DiagnosticSeverity.Information,
       'advisory must be Information severity',
     );
-    assert.strictEqual(advisory.source, 'LeakLens');
+    assert.strictEqual(advisory.source, 'LeakerLens');
 
     // Must have NO error-severity diagnostics (secrets are green, not counted as leaks).
     const errors = diags.filter((d) => d.severity === vscode.DiagnosticSeverity.Error);
@@ -399,7 +399,7 @@ describe('Fix A — .env git classification', () => {
       vscode.DiagnosticSeverity.Warning,
       'exposed warning must be Warning severity',
     );
-    assert.strictEqual(exposedWarning.source, 'LeakLens');
+    assert.strictEqual(exposedWarning.source, 'LeakerLens');
 
     // Must also have at least one Error diagnostic for the actual secret finding.
     const secretErrors = diags.filter(

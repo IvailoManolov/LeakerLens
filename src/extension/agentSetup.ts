@@ -1,5 +1,5 @@
 /**
- * Pure, `vscode`-free helpers for the `LeakLens: Set up agent guardrails` command.
+ * Pure, `vscode`-free helpers for the `LeakerLens: Set up agent guardrails` command.
  *
  * This module mirrors how {@link ../cli/core} separates pure logic from the process shell:
  * every function here is a deterministic string/object transform that takes the *existing*
@@ -49,8 +49,8 @@ export interface AgentTarget {
   readonly stdioType: boolean;
 }
 
-/** The server map is always keyed by server name (we only ever write `leaklens`). */
-export const SERVER_NAME = 'leaklens';
+/** The server map is always keyed by server name (we only ever write `leakerlens`). */
+export const SERVER_NAME = 'leakerlens';
 
 /** All supported agent targets, in QuickPick display order. */
 export const AGENT_TARGETS: readonly AgentTarget[] = [
@@ -85,7 +85,7 @@ export const AGENT_TARGETS: readonly AgentTarget[] = [
 // ---------------------------------------------------------------------------
 
 /**
- * Build the `leaklens` MCP server entry that points at the stable `mcp.js` runner.
+ * Build the `leakerlens` MCP server entry that points at the stable `mcp.js` runner.
  *
  * @param runnerPath Absolute path to `mcp.js` in globalStorage. Normalized to forward slashes
  *   so the generated JSON is identical across platforms (`JSON.stringify` handles escaping).
@@ -108,7 +108,7 @@ export function toPosix(p: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Merge the `leaklens` server entry into an existing MCP config document, preserving every
+ * Merge the `leakerlens` server entry into an existing MCP config document, preserving every
  * other server and every unrelated top-level key. Tolerant of a missing/empty/garbage input
  * (treated as `{}`). Returns pretty-printed (2-space) JSON with a trailing newline.
  *
@@ -117,7 +117,7 @@ export function toPosix(p: string): string {
  *
  * @param existingJsonText Current file contents, or `''` / `undefined` if the file is absent.
  * @param topLevelKey The key the server map lives under (`mcpServers` or `servers`).
- * @param serverEntry The `leaklens` entry to install.
+ * @param serverEntry The `leakerlens` entry to install.
  */
 export function mergeMcpConfig(
   existingJsonText: string | undefined,
@@ -260,8 +260,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 // ---------------------------------------------------------------------------
 
 /** HTML-comment markers delimiting the managed instruction block. */
-export const BLOCK_START = '<!-- leaklens:start -->';
-export const BLOCK_END = '<!-- leaklens:end -->';
+export const BLOCK_START = '<!-- leakerlens:start -->';
+export const BLOCK_END = '<!-- leakerlens:end -->';
 
 /**
  * Build the agent-facing instruction body (between, not including, the markers) given the
@@ -273,14 +273,14 @@ export const BLOCK_END = '<!-- leaklens:end -->';
 export function buildInstructionBlock(cliRunnerPath: string): string {
   const cli = toPosix(cliRunnerPath);
   return [
-    '## Secret scanning — LeakLens',
+    '## Secret scanning — LeakerLens',
     '',
     'Before writing code that may contain credentials, and before finishing a task, check for hardcoded secrets:',
     '',
-    '- **MCP (preferred):** call `leaklens.scan_text` on file contents before writing them; use `leaklens.scan_workspace` to audit. The `leaklens` MCP server is configured for this project.',
+    '- **MCP (preferred):** call `leakerlens.scan_text` on file contents before writing them; use `leakerlens.scan_workspace` to audit. The `leakerlens` MCP server is configured for this project.',
     `- **CLI:** run \`node "${cli}" scan\`. A non-zero exit code means a secret was found. Use \`--json\` for machine-readable output.`,
     '- Never hardcode API keys, tokens, or private keys. Put secrets in a gitignored `.env` file and read them at runtime.',
-    '- LeakLens only ever reports a masked preview + fingerprint — it never echoes the raw secret.',
+    '- LeakerLens only ever reports a masked preview + fingerprint — it never echoes the raw secret.',
   ].join('\n');
 }
 
