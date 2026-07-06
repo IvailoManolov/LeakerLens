@@ -1,5 +1,5 @@
 {
-  "name": "leaklens",
+  "name": "leakerlens",
   "displayName": "LeakLens",
   "description": "Catch API keys, tokens, and secrets as you type — 100% locally. Nothing leaves your machine.",
   "version": "5.0.2",
